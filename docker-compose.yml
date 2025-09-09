@@ -1,0 +1,156 @@
+name: workflow-platform
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Authenticated ping (returns 1 for ok); keeps waiting until Mongo is ready.
+      test: ["CMD-SHELL", "mongosh --quiet -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 5001
+      MONGO_URL: mongodb://root:example@mongo:27017/workflow?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-devsecret}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  workflow-service:
+    build:
+      context: .
+      dockerfile: ./workflow-service/Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 5002
+      MONGO_URL: mongodb://root:example@mongo:27017/workflow?authSource=admin
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 5003
+      REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./api-gateway/Dockerfile
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      workflow-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      AUTH_SERVICE_URL: http://auth-service:5001
+      WORKFLOW_SERVICE_URL: http://workflow-service:5002
+      NOTIFICATION_SERVICE_URL: http://notification-service:5003
+      JWT_SECRET: ${JWT_SECRET:-devsecret}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.97.0
+    restart: unless-stopped
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    environment:
+      # Public URL exposed to the browser (host machine). Keep localhost so the user can reach it.
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:4000}
+      # Internal service-to-service URL used by server components / API routes inside the container network.
+      GATEWAY_INTERNAL_URL: http://api-gateway:4000
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo-data:

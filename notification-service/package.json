@@ -1,0 +1,15 @@
+{
+  "name": "notification-service",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "4.19.2",
+    "bullmq": "5.7.8",
+    "ioredis": "5.4.1"
+  }
+}

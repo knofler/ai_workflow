@@ -1,0 +1,60 @@
+# Dev overrides enabling hot reload without rebuilding images each code change.
+# docker compose up will automatically merge this with docker-compose.yml.
+# Backend services run with Node's built-in --watch flag and mount source folders.
+# A shared-lib-builder container runs tsc in watch mode so updated TS recompiles to dist consumed by services.
+
+services:
+  shared-lib-builder:
+    image: node:22-alpine
+    working_dir: /workspace/shared-lib
+    command: sh -c "npm install --no-audit --no-fund && npx tsc --watch --preserveWatchOutput false"
+    volumes:
+      - ./shared-lib:/workspace/shared-lib
+      - shared-lib-node-modules:/workspace/shared-lib/node_modules
+    restart: unless-stopped
+
+  auth-service:
+    command: ["node", "--watch", "src/index.js"]
+    volumes:
+      - ./auth-service/src:/app/src
+      - ./shared-lib/dist:/app/shared-lib/dist
+    environment:
+      NODE_ENV: development
+
+  workflow-service:
+    command: ["node", "--watch", "src/index.js"]
+    volumes:
+      - ./workflow-service/src:/app/src
+      - ./shared-lib/dist:/app/shared-lib/dist
+    environment:
+      NODE_ENV: development
+
+  notification-service:
+    command: ["node", "--watch", "src/index.js"]
+    volumes:
+      - ./notification-service/src:/app/src
+      - ./shared-lib/dist:/app/shared-lib/dist
+    environment:
+      NODE_ENV: development
+
+  api-gateway:
+    command: ["node", "--watch", "src/index.js"]
+    volumes:
+      - ./api-gateway/src:/app/src
+      - ./shared-lib/dist:/app/shared-lib/dist
+    environment:
+      NODE_ENV: development
+
+  # Frontend dev options:
+  # Option A: keep production container (no hot reload) and run Next.js locally on host.
+  # Option B (uncomment below): run Next.js dev in container with live reload.
+  #frontend:
+  #  command: ["npm", "run", "dev"]
+  #  volumes:
+  #    - ./frontend:/app
+  #    - ./shared-lib/dist:/app/shared-lib/dist
+  #  environment:
+  #    NODE_ENV: development
+
+volumes:
+  shared-lib-node-modules:

@@ -1,0 +1,37 @@
+name: Monorepo CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+jobs:
+  build-shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --workspaces --include-workspace-root
+      - run: npm run build:shared
+  gateway-lint:
+    runs-on: ubuntu-latest
+    needs: build-shared
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --workspaces --include-workspace-root
+      - run: node -e "console.log('lint placeholder')"
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [build-shared]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build -t workflow/auth ./auth-service
+          docker build -t workflow/gateway ./api-gateway
+          docker build -t workflow/workflow ./workflow-service
+          docker build -t workflow/notification ./notification-service
+          docker build -t workflow/frontend ./frontend
