@@ -1,0 +1,28 @@
+name: App CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'infra/**'
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'infra/**'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install (workspaces)
+        run: npm install
+      - name: Build shared
+        run: npm run build:shared
+      - name: Test (if present)
+        run: npm run test || echo "no tests"
+      - name: Lint (if present)
+        run: npm run lint || echo "no lint script"

@@ -1,0 +1,11 @@
+# CODEOWNERS
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners
+*       @knofler
+
+# Infra changes require review
+infra/  @knofler
+
+# Shared contracts
+shared-lib/ @knofler
