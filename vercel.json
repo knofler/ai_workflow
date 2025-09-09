@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm install --workspaces --include-workspace-root=false && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "github": { "silent": false },
+  "ignoreCommand": "bash -c 'CHANGED=$(git diff --name-only $VERCEL_GIT_PREVIOUS_COMMIT $VERCEL_GIT_COMMIT || echo); echo \"$CHANGED\" | grep -q '^frontend/' || [ ! -z \"$FORCE_FRONTEND_BUILD\" ]'",
+  "env": {
+    "NEXT_PUBLIC_API_BASE": "https://api.example.com"
+  }
+}
