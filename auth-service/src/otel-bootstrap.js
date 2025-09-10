@@ -23,5 +23,9 @@ const sdk = new NodeSDK({
   instrumentations: [],
 });
 
-sdk.start().catch(() => {});
+// In some SDK versions, start() may return void; guard before calling .catch
+const _start = sdk.start?.();
+if (_start && typeof _start.catch === 'function') {
+  _start.catch(() => {});
+}
 process.on('SIGTERM', async () => { try { await sdk.shutdown(); } catch {} });
