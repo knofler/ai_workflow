@@ -1,6 +1,12 @@
 name: Docker Build (Differential)
 
 on:
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Build all services (override diff)'
+        type: boolean
+        default: false
   pull_request:
     paths-ignore:
       - 'infra/**'
@@ -19,7 +25,11 @@ jobs:
         with: { fetch-depth: 2 }
       - id: diff
         run: |
-          CHANGED=$(git diff --name-only HEAD~1..HEAD || true)
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force_all }}" == "true" ]]; then
+            CHANGED="__FORCE_ALL__"
+          else
+            CHANGED=$(git diff --name-only HEAD~1..HEAD || true)
+          fi
           {
             echo 'CHANGED<<EOF'
             echo "$CHANGED"
