@@ -19,11 +19,18 @@ jobs:
         with: { fetch-depth: 2 }
       - id: diff
         run: |
-          echo "CHANGED=$(git diff --name-only HEAD~1..HEAD || true)" >> $GITHUB_OUTPUT
+          CHANGED=$(git diff --name-only HEAD~1..HEAD || true)
+          {
+            echo 'CHANGED<<EOF'
+            echo "$CHANGED"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
       - id: set
+        env:
+          CHANGED: ${{ steps.diff.outputs.CHANGED }}
         run: |
-          CHANGED="${{ steps.diff.outputs.CHANGED }}"
-          echo "Changed files:\n$CHANGED"
+          echo "Changed files:"
+          printf '%s\n' "$CHANGED"
           set -e
           needs_all=false
           build_frontend=false
