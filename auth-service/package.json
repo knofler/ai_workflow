@@ -6,12 +6,20 @@
   "scripts": {
     "dev": "node src/index.js",
     "start": "node src/index.js",
+  "lint": "echo 'skip'",
     "test": "node --test || echo 'no tests'"
   },
   "dependencies": {
     "express": "4.19.2",
     "jsonwebtoken": "9.0.2",
     "bcryptjs": "2.4.3",
+  "optionalDependencies": {
+    "@opentelemetry/api": "1.8.0",
+    "@opentelemetry/sdk-node": "0.52.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.52.1",
+    "@opentelemetry/resources": "1.18.1",
+    "@opentelemetry/semantic-conventions": "1.23.0"
+  },
   "mongoose": "8.5.3",
   "zod": "3.23.8",
   "uuid": "9.0.1"

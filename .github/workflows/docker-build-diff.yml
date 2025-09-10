@@ -1,0 +1,95 @@
+name: Docker Build (Differential)
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'infra/**'
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'infra/**'
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: diff
+        run: |
+          echo "CHANGED=$(git diff --name-only HEAD~1..HEAD || true)" >> $GITHUB_OUTPUT
+      - id: set
+        run: |
+          CHANGED="${{ steps.diff.outputs.CHANGED }}"
+          echo "Changed files:\n$CHANGED"
+          set -e
+          needs_all=false
+          build_frontend=false
+          build_gateway=false
+          build_auth=false
+          build_workflow=false
+          build_notify=false
+          build_any=false
+          while IFS= read -r f; do
+            [[ -z "$f" ]] && continue
+            case "$f" in
+              shared-lib/*) build_gateway=true; build_auth=true; build_workflow=true; build_notify=true; build_frontend=true; build_any=true ;;
+              frontend/*) build_frontend=true; build_any=true ;;
+              api-gateway/*) build_gateway=true; build_any=true ;;
+              auth-service/*) build_auth=true; build_any=true ;;
+              workflow-service/*) build_workflow=true; build_any=true ;;
+              notification-service/*) build_notify=true; build_any=true ;;
+              docker-compose.yml|docker-compose.override.yml) needs_all=true; build_any=true ;;
+            esac
+          done <<<"$CHANGED"
+          if $needs_all ; then
+            echo "::notice::Core compose changed, building all"
+            build_frontend=true; build_gateway=true; build_auth=true; build_workflow=true; build_notify=true
+          fi
+          SERVICES=()
+          $build_frontend && SERVICES+=("frontend")
+          $build_gateway && SERVICES+=("api-gateway")
+          $build_auth && SERVICES+=("auth-service")
+          $build_workflow && SERVICES+=("workflow-service")
+          $build_notify && SERVICES+=("notification-service")
+          if [ ${#SERVICES[@]} -eq 0 ]; then
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+          else
+            JSON="{\"include\":["
+            for s in "${SERVICES[@]}"; do
+              JSON+="{\"service\":\"$s\"},"
+            done
+            JSON=${JSON%,}
+            JSON+="]}"
+            echo "matrix=$JSON" >> $GITHUB_OUTPUT
+          fi
+  build:
+    needs: detect
+    if: needs.detect.outputs.matrix != '{"include":[]}'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push ${{ matrix.service }}
+        run: |
+          set -e
+          SHA=${GITHUB_SHA::12}
+          IMAGE="ghcr.io/${{ github.repository }}/${{ matrix.service }}"
+          DOCKERFILE="${{ matrix.service }}/Dockerfile"
+          docker build -f "$DOCKERFILE" -t "$IMAGE:$SHA" -t "$IMAGE:main" .
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            docker push "$IMAGE:$SHA"
+            docker push "$IMAGE:main"
+          fi

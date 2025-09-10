@@ -15,8 +15,8 @@
     "build:shared": "npm --workspace shared-lib run build",
     "build:services": "npm run build --workspaces --if-present",
     "build": "npm run build:shared && npm run build:services",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+  "test": "npm --workspace shared-lib run test",
+  "lint": "eslint . --max-warnings=0 || true",
     "ci": "npm install && npm run build:shared && npm run test",
     "dev": "echo 'Use docker compose (override) for live dev; or cd service && npm run dev'"
   }

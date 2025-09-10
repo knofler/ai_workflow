@@ -1,3 +1,5 @@
+// OTEL bootstrap (no-op if exporter not reachable)
+import './otel-bootstrap.js';
 import express from 'express';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
