@@ -49,6 +49,10 @@ jobs:
           build_workflow=false
           build_notify=false
           build_any=false
+          # If manual trigger requested full build, mark needs_all
+          if [[ "$CHANGED" == "__FORCE_ALL__" ]]; then
+            needs_all=true
+          fi
           while IFS= read -r f; do
             [[ -z "$f" ]] && continue
             case "$f" in
