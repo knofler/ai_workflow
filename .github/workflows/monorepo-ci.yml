@@ -30,8 +30,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build images
         run: |
-          docker build -t workflow/auth ./auth-service
-          docker build -t workflow/gateway ./api-gateway
-          docker build -t workflow/workflow ./workflow-service
-          docker build -t workflow/notification ./notification-service
-          docker build -t workflow/frontend ./frontend
+          # Build with repo root as context so Dockerfiles can COPY from top-level paths (e.g., shared-lib/*, auth-service/src)
+          docker build -f ./auth-service/Dockerfile -t workflow/auth .
+          docker build -f ./api-gateway/Dockerfile -t workflow/gateway .
+          docker build -f ./workflow-service/Dockerfile -t workflow/workflow .
+          docker build -f ./notification-service/Dockerfile -t workflow/notification .
+          docker build -f ./frontend/Dockerfile -t workflow/frontend .
