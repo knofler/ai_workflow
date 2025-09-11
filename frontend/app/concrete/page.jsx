@@ -105,7 +105,7 @@ export default function ConcreteFormPage() {
             {step < steps.length-1 ? (
               <button className="btn" onClick={()=> setStep(s=> Math.min(steps.length-1, s+1))}>Next</button>
             ) : (
-              <button className="btn" onClick={submit}>Submit</button>
+              <div />
             )}
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function ConcreteFormPage() {
           <a className="btn mt-3 inline-block" href={`/concrete/${result._id}`}>Open Report</a>
         </Card>
       )}
-      {/* Sticky submit kept for accessibility on mobile when at last step */}
+  {/* Single sticky submit on the last step */}
       {step===steps.length-1 && (
         <div className="fixed bottom-4 right-4 z-50">
           <button className="btn shadow-lg" onClick={submit}>Submit</button>
