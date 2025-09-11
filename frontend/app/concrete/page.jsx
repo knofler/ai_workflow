@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Card from '../../components/Card';
 import { baseUrls, jsonFetch } from '../../lib/api';
+import { EQUIPMENT_DEFAULTS, EQUIPMENT_SUGGESTIONS, SPEC_DEFAULTS } from '../../lib/concreteDefaults';
 
 export default function ConcreteFormPage() {
   const { workflow } = baseUrls();
@@ -14,14 +15,18 @@ export default function ConcreteFormPage() {
     // Physical properties and specs
     airContentPct:'', specAirMin:'', specAirMax:'',
     slumpIn:'', specSlumpMin:'', specSlumpMax:'',
-    tempConcreteF:'', specTempMin:'50', specTempMax:'90',
+  tempConcreteF:'', specTempMin: SPEC_DEFAULTS.specTempMin, specTempMax: SPEC_DEFAULTS.specTempMax,
     unitWeightPcf:'', yieldCY:'', relativeYield:'',
     mixDesignStrengthPsi:'', requiredStrengthPsi:'',
     cementLb:'', otherCementitiousLb:'', waterLb:'', excessWaterCoarseLb:'', excessWaterFineLb:'',
-    fineAggregateLb:'', coarseAggregate1Lb:'', coarseAggregate2Lb:'',
-    maxAggregateSizeIn:'', admixture1Type:'', admixture1Oz:'', admixture2Type:'', admixture2Oz:'', admixture3Type:'', admixture3Oz:'', totalBatchWeightLb:'',
+  fineAggregateLb:'', coarseAggregate1Lb:'', coarseAggregate2Lb:'',
+  maxAggregateSizeIn: EQUIPMENT_DEFAULTS.maxAggregateSizeIn, admixture1Type:'', admixture1Oz:'', admixture2Type:'', admixture2Oz:'', admixture3Type:'', admixture3Oz:'', totalBatchWeightLb:'',
     // Equipment IDs
-    slumpConeId:'', thermometerId:'', airMeterId:'', unitWeightMeasureId:'', scaleId:'',
+  slumpConeId: EQUIPMENT_DEFAULTS.slumpConeId,
+  thermometerId: EQUIPMENT_DEFAULTS.thermometerId,
+  airMeterId: EQUIPMENT_DEFAULTS.airMeterId,
+  unitWeightMeasureId: EQUIPMENT_DEFAULTS.unitWeightMeasureId,
+  scaleId: EQUIPMENT_DEFAULTS.scaleId,
     // Cylinders table
     cylinders:[{ qty:'', sizeIn:'6', ageDays:'7', ids:'' }],
     // Strengths grid scaffold (A..G rows)
@@ -31,7 +36,10 @@ export default function ConcreteFormPage() {
     // People/notes
     testedBy:'', fieldRepresentative:'', notes:'',
     // Bottom equipment/logistics
-    compMachineId:'', caliperId:'', compScaleId:'', retRings:'',
+  compMachineId: EQUIPMENT_DEFAULTS.compMachineId,
+  caliperId: EQUIPMENT_DEFAULTS.caliperId,
+  compScaleId: EQUIPMENT_DEFAULTS.compScaleId,
+  retRings: EQUIPMENT_DEFAULTS.retRings,
     cylindersCastInField:false, cylindersCastInLab:false,
     timeCylindersMolded:'', cylindersTempRangeFirst24h:'', whereCylindersCured:'', fieldPlacementObservations:'', remarks:'',
     dateCylindersReceivedInLab:'', pickUpBy:'', cylindersCondition:'', chargeableTime:'', testPickUpHours:'', delayedHours:'', delayedWhy:''
@@ -197,7 +205,7 @@ export default function ConcreteFormPage() {
                   <input className="input mt-1 w-full" value={data.coarseAggregate2Lb} onChange={e=> setData(d=> ({...d, coarseAggregate2Lb:e.target.value}))} />
                 </label>
                 <label className="label">Max Aggregate Size (in)
-                  <input className="input mt-1 w-full" value={data.maxAggregateSizeIn} onChange={e=> setData(d=> ({...d, maxAggregateSizeIn:e.target.value}))} />
+                  <input list="maxAggregateSizeIn-list" className="input mt-1 w-full" value={data.maxAggregateSizeIn} onChange={e=> setData(d=> ({...d, maxAggregateSizeIn:e.target.value}))} />
                 </label>
                 <label className="label">Admix 1 Type
                   <input className="input mt-1 w-full" value={data.admixture1Type} onChange={e=> setData(d=> ({...d, admixture1Type:e.target.value}))} />
@@ -233,19 +241,19 @@ export default function ConcreteFormPage() {
                 <input className="input mt-1 w-full" value={data.estRhPct} onChange={e=> setData(d=> ({...d, estRhPct:e.target.value}))} />
               </label>
               <label className="label">Slump Cone ID
-                <input className="input mt-1 w-full" value={data.slumpConeId} onChange={e=> setData(d=> ({...d, slumpConeId:e.target.value}))} />
+                <input list="slumpConeId-list" className="input mt-1 w-full" value={data.slumpConeId} onChange={e=> setData(d=> ({...d, slumpConeId:e.target.value}))} />
               </label>
               <label className="label">Thermometer ID
-                <input className="input mt-1 w-full" value={data.thermometerId} onChange={e=> setData(d=> ({...d, thermometerId:e.target.value}))} />
+                <input list="thermometerId-list" className="input mt-1 w-full" value={data.thermometerId} onChange={e=> setData(d=> ({...d, thermometerId:e.target.value}))} />
               </label>
               <label className="label">Air Meter ID
-                <input className="input mt-1 w-full" value={data.airMeterId} onChange={e=> setData(d=> ({...d, airMeterId:e.target.value}))} />
+                <input list="airMeterId-list" className="input mt-1 w-full" value={data.airMeterId} onChange={e=> setData(d=> ({...d, airMeterId:e.target.value}))} />
               </label>
               <label className="label">Unit Weight Measure ID
-                <input className="input mt-1 w-full" value={data.unitWeightMeasureId} onChange={e=> setData(d=> ({...d, unitWeightMeasureId:e.target.value}))} />
+                <input list="unitWeightMeasureId-list" className="input mt-1 w-full" value={data.unitWeightMeasureId} onChange={e=> setData(d=> ({...d, unitWeightMeasureId:e.target.value}))} />
               </label>
               <label className="label">Scale ID
-                <input className="input mt-1 w-full" value={data.scaleId} onChange={e=> setData(d=> ({...d, scaleId:e.target.value}))} />
+                <input list="scaleId-list" className="input mt-1 w-full" value={data.scaleId} onChange={e=> setData(d=> ({...d, scaleId:e.target.value}))} />
               </label>
             </div>
           </section>
@@ -318,16 +326,16 @@ export default function ConcreteFormPage() {
             </div>
             <div className="grid md:grid-cols-4 gap-4 mt-4">
               <label className="label">Comp. Machine ID
-                <input className="input mt-1 w-full" value={data.compMachineId} onChange={e=> setData(d=> ({...d, compMachineId:e.target.value}))} />
+                <input list="compMachineId-list" className="input mt-1 w-full" value={data.compMachineId} onChange={e=> setData(d=> ({...d, compMachineId:e.target.value}))} />
               </label>
               <label className="label">Caliper ID
-                <input className="input mt-1 w-full" value={data.caliperId} onChange={e=> setData(d=> ({...d, caliperId:e.target.value}))} />
+                <input list="caliperId-list" className="input mt-1 w-full" value={data.caliperId} onChange={e=> setData(d=> ({...d, caliperId:e.target.value}))} />
               </label>
               <label className="label">Scale ID
-                <input className="input mt-1 w-full" value={data.compScaleId} onChange={e=> setData(d=> ({...d, compScaleId:e.target.value}))} />
+                <input list="compScaleId-list" className="input mt-1 w-full" value={data.compScaleId} onChange={e=> setData(d=> ({...d, compScaleId:e.target.value}))} />
               </label>
               <label className="label">Ret. Rings
-                <input className="input mt-1 w-full" value={data.retRings} onChange={e=> setData(d=> ({...d, retRings:e.target.value}))} />
+                <input list="retRings-list" className="input mt-1 w-full" value={data.retRings} onChange={e=> setData(d=> ({...d, retRings:e.target.value}))} />
               </label>
             </div>
             <div className="grid md:grid-cols-3 gap-4 mt-4">
@@ -393,6 +401,14 @@ export default function ConcreteFormPage() {
           <a className="btn mt-3 inline-block" href={`/concrete/${result._id}`}>Open Report</a>
         </Card>
       )}
+      {/* Datalists for suggestions */}
+      {Object.entries(EQUIPMENT_SUGGESTIONS).map(([key, arr]) => (
+        <datalist id={`${key}-list`} key={key}>
+          {arr.map((v) => (
+            <option value={v} key={v} />
+          ))}
+        </datalist>
+      ))}
       <style jsx>{`
         .section-header { background:#3949ab; color:#fff; padding:6px 10px; border-radius:6px 6px 0 0; font-weight:600; letter-spacing:0.02em; }
       `}</style>
