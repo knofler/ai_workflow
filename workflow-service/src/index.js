@@ -39,6 +39,27 @@ const workflowInstanceSchema = new mongoose.Schema({
 const WorkflowDefinition = mongoose.models.WorkflowDefinition || mongoose.model('WorkflowDefinition', workflowDefinitionSchema);
 const WorkflowInstance = mongoose.models.WorkflowInstance || mongoose.model('WorkflowInstance', workflowInstanceSchema);
 
+// Masters
+const projectMasterSchema = new mongoose.Schema({
+	projectNo: { type: String, required: true, unique: true },
+	projectName: String,
+	client: String,
+	address: String,
+	phone: String,
+	defaultWeather: String
+}, { timestamps: true });
+const gaugeMasterSchema = new mongoose.Schema({
+	name: String,
+	make: { type: String, default: 'Troxler' },
+	model: { type: String, default: '3430' },
+	serialNo: String,
+	densityStandardCount: Number,
+	moistureStandardCount: Number,
+	isDefault: { type: Boolean, default: false }
+}, { timestamps: true });
+const ProjectMaster = mongoose.models.ProjectMaster || mongoose.model('ProjectMaster', projectMasterSchema);
+const GaugeMaster = mongoose.models.GaugeMaster || mongoose.model('GaugeMaster', gaugeMasterSchema);
+
 // FDT Form Schema (Field Density Test form)
 const fdtFormSchema = new mongoose.Schema({
 	// Header
@@ -100,7 +121,12 @@ const fdtFormSchema = new mongoose.Schema({
 	reviewedBy: { type: String, default: '' },
 
 	// Raw extras (optional)
-	notes: { type: String, default: '' }
+	notes: { type: String, default: '' },
+
+	// Publication
+	published: { type: Boolean, default: false },
+	publishedAt: { type: Date },
+	reportUrl: { type: String }
 }, { timestamps: true });
 const FdtForm = mongoose.models.FdtForm || mongoose.model('FdtForm', fdtFormSchema);
 
@@ -133,6 +159,38 @@ mongoose.connect(MONGO_URL).then(async ()=>{
 }).catch(e=>console.error('[workflow-service] mongo error', e));
 
 app.get('/health', (_req, res) => res.json({ service: 'workflow-service', status: 'ok' }));
+
+// --- Masters Endpoints ---
+// Projects
+app.post('/masters/projects', async (req, res) => {
+	try { const doc = await ProjectMaster.create(req.body || {}); res.status(201).json(doc); }
+	catch(e){ res.status(400).json({ error: e.message }); }
+});
+app.get('/masters/projects', async (_req, res) => {
+	const items = await ProjectMaster.find().sort({ projectNo: 1 }).lean();
+	res.json(items);
+});
+app.get('/masters/projects/:projectNo', async (req, res) => {
+	const item = await ProjectMaster.findOne({ projectNo: req.params.projectNo }).lean();
+	if (!item) return res.status(404).json({ error: 'not_found' });
+	res.json(item);
+});
+// Gauges
+app.post('/masters/gauges', async (req, res) => {
+	try {
+		if (req.body?.isDefault) await GaugeMaster.updateMany({ isDefault: true }, { isDefault: false });
+		const doc = await GaugeMaster.create(req.body || {});
+		res.status(201).json(doc);
+	} catch(e){ res.status(400).json({ error: e.message }); }
+});
+app.get('/masters/gauges', async (_req, res) => {
+	const items = await GaugeMaster.find().sort({ updatedAt: -1 }).lean();
+	res.json(items);
+});
+app.get('/masters/gauges/default', async (_req, res) => {
+	const item = await GaugeMaster.findOne({ isDefault: true }).lean();
+	res.json(item || null);
+});
 
 // --- FDT Form Endpoints ---
 const num = z.union([z.number(), z.string().transform(v => v.trim() === '' ? undefined : Number(v)).pipe(z.number())]).optional();
@@ -194,9 +252,54 @@ const fdtSchema = z.object({
 app.post('/fdt', async (req, res) => {
 		try {
 			const body = fdtSchema.parse(req.body || {});
+			// Prefill from ProjectMaster and GaugeMaster if available
+			let prefilled = { ...body };
+			if (body.projectNo) {
+				const pm = await ProjectMaster.findOne({ projectNo: body.projectNo }).lean();
+				if (pm) {
+					prefilled.client = prefilled.client || pm.client;
+					prefilled.projectName = prefilled.projectName || pm.projectName;
+					prefilled.weather = prefilled.weather || pm.defaultWeather;
+				}
+			}
+			if (!body.gaugeMake || !body.gaugeModel) {
+				const gm = await GaugeMaster.findOne({ isDefault: true }).lean() || await GaugeMaster.findOne().lean();
+				if (gm) {
+					prefilled.gaugeMake = prefilled.gaugeMake || gm.make;
+					prefilled.gaugeModel = prefilled.gaugeModel || gm.model;
+					prefilled.gaugeSN = prefilled.gaugeSN || gm.serialNo;
+					prefilled.standardDensityCount = prefilled.standardDensityCount ?? gm.densityStandardCount;
+					prefilled.standardMoistureCount = prefilled.standardMoistureCount ?? gm.moistureStandardCount;
+				}
+			}
+
+			// Compute compaction and result codes when possible
+			const proctorById = Object.fromEntries((prefilled.proctors||[]).filter(p=>p?.proctorId).map(p=> [p.proctorId, p]));
+			const minus = Number(prefilled.moistureReqFrom ?? 0);
+			const plus = Number(prefilled.moistureReqTo ?? 0);
+			const minComp = Number(prefilled.minCompactionRequirement ?? 0);
+			prefilled.testResults = (prefilled.testResults || []).map(tr => {
+				let compactionPct = tr.compactionPct;
+				let resultCode = tr.resultCode;
+				const p = tr.proctorId ? proctorById[tr.proctorId] : undefined;
+				if (!compactionPct && p?.mddPcf && tr?.dryDensityPcf){
+					compactionPct = Math.round((Number(tr.dryDensityPcf)/Number(p.mddPcf))*1000)/10; // 0.1%
+				}
+				if (!resultCode && p?.omcPct != null && tr?.moistureContentPct != null){
+					const omc = Number(p.omcPct);
+					const mc = Number(tr.moistureContentPct);
+					const high = omc + plus;
+					const low = omc - minus;
+					if (compactionPct != null && Number(compactionPct) < minComp) resultCode = 'B';
+					else if (mc > high) resultCode = 'D';
+					else if (mc < low) resultCode = 'E';
+					else if (compactionPct != null) resultCode = 'A';
+				}
+				return { ...tr, compactionPct, resultCode };
+			});
 			const coerceDate = (d) => d ? (typeof d === 'string' ? new Date(d) : d) : undefined;
 			const doc = await FdtForm.create({
-				...body,
+				...prefilled,
 				date: coerceDate(body.date),
 				dateTested: coerceDate(body.dateTested)
 			});
@@ -281,7 +384,27 @@ app.post('/workflow-instances', async (req, res) => {
 		const def = await WorkflowDefinition.findById(definitionId);
 		if (!def) return res.status(404).json({ error: 'definition_not_found' });
 		const initialState = def.states[0];
-	const inst = await withSpan('create_instance', () => WorkflowInstance.create({ definitionId, currentState: initialState, context: context || {}, history: [{ state: initialState, ts: new Date() }] }), req.logger);
+
+		// Prefill context from masters
+		let enriched = { ...(context || {}) };
+		try {
+			if (enriched.projectNo) {
+				const pm = await ProjectMaster.findOne({ projectNo: enriched.projectNo }).lean();
+				if (pm) {
+					enriched.client = enriched.client || pm.client;
+					enriched.projectName = enriched.projectName || pm.projectName;
+					enriched.weather = enriched.weather || pm.defaultWeather;
+				}
+			}
+			const gm = await GaugeMaster.findOne({ isDefault: true }).lean();
+			if (gm) {
+				enriched.gaugeMake = enriched.gaugeMake || gm.make;
+				enriched.gaugeModel = enriched.gaugeModel || gm.model;
+				enriched.gaugeSN = enriched.gaugeSN || gm.serialNo;
+			}
+		} catch (e) { req.logger?.warn?.('prefill_context_failed', { error: e?.message }); }
+
+	const inst = await withSpan('create_instance', () => WorkflowInstance.create({ definitionId, currentState: initialState, context: enriched, history: [{ state: initialState, ts: new Date() }] }), req.logger);
 		res.status(201).json(inst);
 	} catch (e) {
 		res.status(400).json({ error: e.message });
@@ -317,6 +440,15 @@ app.post('/workflow-instances/:id/events', async (req, res) => {
 		inst.history.push({ state: next, ts: new Date(), event });
 		inst.currentState = next;
 		if (next.toLowerCase() === 'end' || next.toLowerCase() === 'completed') inst.status = 'completed';
+
+		// Auto-generate report hook on approve/publish
+		if ((event === 'approve' || event === 'publish_report') && inst?.context?.fdtId) {
+			try {
+				const id = inst.context.fdtId;
+				await FdtForm.findByIdAndUpdate(id, { published: true, publishedAt: new Date(), reportUrl: `/fdt/${id}` });
+				req.logger?.info?.('auto_publish_report', { fdtId: id });
+			} catch (e) { req.logger?.warn?.('auto_publish_failed', { error: e?.message }); }
+		}
 		await inst.save();
 		res.json(inst);
 	} catch (e) {

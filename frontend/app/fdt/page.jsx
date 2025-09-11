@@ -57,6 +57,29 @@ export default function FdtFormPage() {
   const [result, setResult] = useState(null);
   const [err, setErr] = useState('');
 
+  // derive map for quick lookups
+  const proctorMap = Object.fromEntries(proctors.filter(p=>p.proctorId).map(p=> [p.proctorId, p]));
+  const calcCompaction = (dry, proctorId) => {
+    const p = proctorMap[proctorId];
+    if (!p?.mddPcf || !dry) return '';
+    const v = (Number(dry)/Number(p.mddPcf))*100;
+    return (Math.round(v*10)/10).toString();
+  };
+  const calcResult = (moisturePct, compactionPct, proctorId) => {
+    const p = proctorMap[proctorId];
+    if (!p) return '';
+    const omc = Number(p.omcPct||0);
+    const minus = Number(testing.moistureReqFrom||0);
+    const plus = Number(testing.moistureReqTo||0);
+    const minComp = Number(testing.minCompactionRequirement||0);
+    const mc = Number(moisturePct||0);
+    const comp = Number(compactionPct||0);
+    if (comp && comp < minComp) return 'B';
+    if (mc > omc + plus) return 'D';
+    if (mc < omc - minus) return 'E';
+    return comp ? 'A' : '';
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setErr('');
@@ -78,20 +101,46 @@ export default function FdtFormPage() {
     } catch (e) { setErr(String(e.message||e)); }
   };
 
+  const onChangeTest = (i, patch) => {
+    setTestResults(prev => {
+      const next = prev.map((x,idx)=> idx===i? { ...x, ...patch } : x);
+      const r = next[i];
+      const comp = calcCompaction(r.dryDensityPcf, r.proctorId);
+      const res = calcResult(r.moistureContentPct, comp||r.compactionPct, r.proctorId);
+      next[i] = { ...r, compactionPct: comp || r.compactionPct, resultCode: res || r.resultCode };
+      return next;
+    });
+  };
+
   const renumber = (arr) => arr.map((r, idx) => ({ ...r, testNo: idx + 1 }));
   const addTestRow = () => {
     if (testResults.length >= 30) return;
-    setTestResults(prev => renumber([...prev, { testNo: prev.length + 1, proctorId:'', probeDepthIn:'', wetDensityPcf:'', dryDensityPcf:'', moistureContentPct:'', compactionPct:'', resultCode:'' }]));
-    setLocationTests(prev => renumber([...prev, { testNo: prev.length + 1, location:'', material:'', elevLift:'' }]));
+    setTestResults(prev => {
+      const last = prev[prev.length-1] || {};
+      return renumber([...prev, { testNo: prev.length + 1, proctorId:last.proctorId||'', probeDepthIn:last.probeDepthIn||'', wetDensityPcf:'', dryDensityPcf:'', moistureContentPct:'', compactionPct:'', resultCode:'' }]);
+    });
+    setLocationTests(prev => {
+      const last = prev[prev.length-1] || {};
+      return renumber([...prev, { testNo: prev.length + 1, location:last.location||'', material:last.material||'', elevLift:last.elevLift||'' }]);
+    });
   };
   const removeTestRow = (i) => {
     setTestResults(prev => renumber(prev.filter((_, idx) => idx !== i)));
     setLocationTests(prev => renumber(prev.filter((_, idx) => idx !== i)));
   };
 
+  // guards: minimal required fields
+  const canSubmit = () => {
+    if (!header.date || !header.projectNo || !header.projectName) return false;
+    if (!testing.testedBy || !testing.gaugeModel) return false;
+    if (!proctors.length) return false;
+    const anyRow = testResults.some(r=> r.proctorId && (r.dryDensityPcf || r.moistureContentPct));
+    return anyRow;
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto overflow-x-hidden text-[13px]">
-      <Card title="" action={<button className="btn" onClick={submit}>Submit</button>}>
+      <Card title="" action={<button className="btn" onClick={submit} disabled={!canSubmit()}>Submit</button>}>
         <form className="space-y-6" onSubmit={submit}>
           {/* Title */}
           <div className="text-center">
@@ -243,13 +292,13 @@ export default function FdtFormPage() {
                     <>
                       <tr key={`row-${i}`}>
                         <td className="text-center">{r.testNo}</td>
-                        <td><input className="input w-full blue-cell" value={r.proctorId} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, proctorId:e.target.value}:x))} /></td>
-                        <td><input className="input w-full blue-cell" value={r.probeDepthIn} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, probeDepthIn:e.target.value}:x))} /></td>
+                        <td><input className="input w-full blue-cell" value={r.proctorId} onChange={e=> onChangeTest(i, { proctorId:e.target.value })} /></td>
+                        <td><input className="input w-full blue-cell" value={r.probeDepthIn} onChange={e=> onChangeTest(i, { probeDepthIn:e.target.value })} /></td>
                         <td><input className="input w-full blue-cell" value={locationTests[i]?.elevLift || ''} onChange={e=> setLocationTests(prev=> prev.map((x,idx)=> idx===i?{...x, elevLift:e.target.value}:x))} /></td>
-                        <td><input className="input w-full blue-cell" value={r.wetDensityPcf} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, wetDensityPcf:e.target.value}:x))} /></td>
-                        <td><input className="input w-full blue-cell" value={r.dryDensityPcf} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, dryDensityPcf:e.target.value}:x))} /></td>
-                        <td><input className="input w-full blue-cell" value={r.moistureContentPct} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, moistureContentPct:e.target.value}:x))} /></td>
-                        <td><input className="input w-full blue-cell" value={r.compactionPct} onChange={e=> setTestResults(prev=> prev.map((x,idx)=> idx===i?{...x, compactionPct:e.target.value}:x))} /></td>
+                        <td><input className="input w-full blue-cell" value={r.wetDensityPcf} onChange={e=> onChangeTest(i, { wetDensityPcf:e.target.value })} /></td>
+                        <td><input className="input w-full blue-cell" value={r.dryDensityPcf} onChange={e=> onChangeTest(i, { dryDensityPcf:e.target.value })} /></td>
+                        <td><input className="input w-full blue-cell" value={r.moistureContentPct} onChange={e=> onChangeTest(i, { moistureContentPct:e.target.value })} /></td>
+                        <td><input className="input w-full blue-cell" value={r.compactionPct} onChange={e=> onChangeTest(i, { compactionPct:e.target.value })} /></td>
                         <td className="blue-cell text-right">
                           <button type="button" className="btn" onClick={()=> removeTestRow(i)}>Remove</button>
                         </td>
