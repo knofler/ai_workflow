@@ -43,6 +43,7 @@ const RefreshToken = mongoose.models.RefreshToken || mongoose.model('RefreshToke
 mongoose.connect(MONGO_URL).then(() => {
   console.log('[auth-service] connected mongo');
   seedAdmin();
+  seedPersonas();
 }).catch(e => console.error('[auth-service] mongo error', e));
 
 async function seedAdmin() {
@@ -51,6 +52,29 @@ async function seedAdmin() {
     const passwordHash = await bcrypt.hash('admin123', 10);
     await User.create({ username: 'admin', passwordHash, roles: ['admin'] });
     console.log('[auth-service] seeded default admin credentials admin/admin123');
+  }
+}
+
+async function seedPersonas() {
+  const personas = [
+    { username: 'tech.alex', roles: ['technician'] },
+    { username: 'tech.sam', roles: ['technician'] },
+    { username: 'pm.jordan', roles: ['project_manager'] },
+    { username: 'geo.rivera', roles: ['geologist'] },
+    { username: 'ce.jun.lee', roles: ['civil_engineer_junior'] },
+    { username: 'ce.sen.khan', roles: ['civil_engineer_senior'] },
+    { username: 'ce.chief.taylor', roles: ['civil_engineer_chief'] },
+    { username: 'lab.tech.morgan', roles: ['lab_technician'] },
+    { username: 'qa.qc.patel', roles: ['qa_qc'] },
+    { username: 'review.singh', roles: ['reviewer'] }
+  ];
+  for (const p of personas) {
+    const exists = await User.findOne({ username: p.username });
+    if (!exists) {
+      const passwordHash = await bcrypt.hash('Passw0rd!', 10);
+      await User.create({ username: p.username, passwordHash, roles: p.roles });
+      console.log(`[auth-service] seeded user ${p.username}/Passw0rd! roles=${p.roles.join(',')}`);
+    }
   }
 }
 
@@ -90,6 +114,12 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   const user = await User.findById(req.user.sub).lean();
   if (!user) return res.status(404).json({ error: 'not_found' });
   res.json({ username: user.username, roles: user.roles, id: user._id });
+});
+
+// Public list of users for dropdowns (limit fields)
+app.get('/auth/users', async (_req, res) => {
+  const users = await User.find({}, { username: 1, roles: 1 }).sort({ username: 1 }).lean();
+  res.json(users.map(u=> ({ id: u._id, username: u.username, roles: u.roles })));
 });
 
 app.post('/auth/refresh', async (req, res) => {

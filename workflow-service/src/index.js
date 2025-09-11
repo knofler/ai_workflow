@@ -62,6 +62,14 @@ const gaugeMasterSchema = new mongoose.Schema({
 const ProjectMaster = mongoose.models.ProjectMaster || mongoose.model('ProjectMaster', projectMasterSchema);
 const GaugeMaster = mongoose.models.GaugeMaster || mongoose.model('GaugeMaster', gaugeMasterSchema);
 
+// Additional masters: Clients, Trucks, Physical Properties
+const clientMasterSchema = new mongoose.Schema({ name: { type: String, unique: true, index: true } }, { timestamps: true });
+const truckMasterSchema = new mongoose.Schema({ truckNo: { type: String, unique: true, index: true }, supplier: String, plant: String }, { timestamps: true });
+const physicalPropsSchema = new mongoose.Schema({ name: { type: String, unique: true }, values: Object }, { timestamps: true });
+const ClientMaster = mongoose.models.ClientMaster || mongoose.model('ClientMaster', clientMasterSchema);
+const TruckMaster = mongoose.models.TruckMaster || mongoose.model('TruckMaster', truckMasterSchema);
+const PhysicalProps = mongoose.models.PhysicalProps || mongoose.model('PhysicalProps', physicalPropsSchema);
+
 // FDT Form Schema (Field Density Test form)
 const fdtFormSchema = new mongoose.Schema({
 	// Header
@@ -285,6 +293,26 @@ mongoose.connect(MONGO_URL).then(async ()=>{
 			console.warn('[workflow-service] seed failed', e?.message || e);
 		}
 	}
+		// Seed clients, trucks, physical props if empty
+		if (await ClientMaster.countDocuments() === 0) {
+			await ClientMaster.insertMany([
+				{ name: 'Acme Construction' }, { name: 'Globex Corp' }, { name: 'Initech' }, { name: 'Umbrella Dev' }, { name: 'Wayne Civil' }
+			]);
+			console.log('[workflow-service] seeded clients');
+		}
+		if (await TruckMaster.countDocuments() === 0) {
+			await TruckMaster.insertMany([
+				{ truckNo: 'TRK-101', supplier: 'ReadyMix Co', plant: 'Plant A' },
+				{ truckNo: 'TRK-102', supplier: 'ReadyMix Co', plant: 'Plant B' },
+				{ truckNo: 'TRK-201', supplier: 'CementMix LLC', plant: 'North' }
+			]);
+			console.log('[workflow-service] seeded trucks');
+		}
+		if (await PhysicalProps.countDocuments() === 0) {
+			const demo = Array.from({ length: 10 }).map((_,i)=> ({ name: `Mix-${100+i}`, values: { airContentPct: 4+i%3, slumpIn: 3+(i%2), unitWeightPcf: 145-(i%5), specAirMin: 3, specAirMax: 6, specSlumpMin: 2, specSlumpMax: 5, specTempMin: 50, specTempMax: 90 } }));
+			await PhysicalProps.insertMany(demo);
+			console.log('[workflow-service] seeded physical properties (10)');
+		}
 }).catch(e=>console.error('[workflow-service] mongo error', e));
 
 app.get('/health', (_req, res) => res.json({ service: 'workflow-service', status: 'ok' }));
@@ -319,6 +347,33 @@ app.get('/masters/gauges', async (_req, res) => {
 app.get('/masters/gauges/default', async (_req, res) => {
 	const item = await GaugeMaster.findOne({ isDefault: true }).lean();
 	res.json(item || null);
+});
+
+// Clients
+app.post('/masters/clients', async (req, res) => {
+	try { const doc = await ClientMaster.create(req.body || {}); res.status(201).json(doc); }
+	catch(e){ res.status(400).json({ error: e.message }); }
+});
+app.get('/masters/clients', async (_req, res) => {
+	res.json(await ClientMaster.find().sort({ name: 1 }).lean());
+});
+
+// Trucks
+app.post('/masters/trucks', async (req, res) => {
+	try { const doc = await TruckMaster.create(req.body || {}); res.status(201).json(doc); }
+	catch(e){ res.status(400).json({ error: e.message }); }
+});
+app.get('/masters/trucks', async (_req, res) => {
+	res.json(await TruckMaster.find().sort({ truckNo: 1 }).lean());
+});
+
+// Physical Props
+app.post('/masters/physical-props', async (req, res) => {
+	try { const doc = await PhysicalProps.create(req.body || {}); res.status(201).json(doc); }
+	catch(e){ res.status(400).json({ error: e.message }); }
+});
+app.get('/masters/physical-props', async (_req, res) => {
+	res.json(await PhysicalProps.find().sort({ name: 1 }).lean());
 });
 
 // --- FDT Form Endpoints ---

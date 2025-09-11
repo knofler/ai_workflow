@@ -3,8 +3,8 @@ import Nav from '../components/Nav.jsx';
 export const metadata = { title: 'Workflow Platform' };
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="bg-zinc-50 text-zinc-900 min-h-screen">
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen">
         <Nav />
         <div className="container py-6">{children}</div>
       </body>

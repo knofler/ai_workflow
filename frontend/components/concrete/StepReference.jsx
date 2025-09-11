@@ -1,10 +1,23 @@
 "use client";
+import { useEffect, useState } from 'react';
+import { baseUrls } from '../../lib/api';
 export default function StepReference({ data, setData }) {
+  const { workflow, auth } = baseUrls();
+  const [clients, setClients] = useState([]);
+  const [trucks, setTrucks] = useState([]);
+  useEffect(()=>{ (async()=>{
+    try { const cs = await fetch(`${workflow}/masters/clients`, { cache:'no-store' }).then(r=> r.json()); setClients(cs||[]); } catch {}
+    try { const ts = await fetch(`${workflow}/masters/trucks`, { cache:'no-store' }).then(r=> r.json()); setTrucks(ts||[]); } catch {}
+  })(); }, [workflow]);
+  const genId = (prefix) => `${prefix}-${new Date().toISOString().slice(2,10).replaceAll('-','')}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
   return (
     <div className="grid md:grid-cols-3 gap-4">
       <label className="label">Cylinder ID
-        <input className="input mt-1 w-full" placeholder="e.g., 24-0911-001" value={data.cylinderId}
-               onChange={e=> setData(d=> ({...d, cylinderId:e.target.value}))} />
+        <div className="flex gap-2 mt-1">
+          <input className="input w-full" placeholder="auto or enter" value={data.cylinderId}
+                 onChange={e=> setData(d=> ({...d, cylinderId:e.target.value}))} />
+          <button type="button" className="btn" onClick={()=> setData(d=> ({...d, cylinderId: genId('CYL')}))}>Auto</button>
+        </div>
       </label>
       <label className="label">Date
         <input type="date" className="input mt-1 w-full" value={data.date}
@@ -15,8 +28,10 @@ export default function StepReference({ data, setData }) {
                onChange={e=> setData(d=> ({...d, projectNo:e.target.value}))} />
       </label>
       <label className="label">Client
-        <input className="input mt-1 w-full" value={data.client}
-               onChange={e=> setData(d=> ({...d, client:e.target.value}))} />
+        <input list="client-list" className="input mt-1 w-full" value={data.client} onChange={e=> setData(d=> ({...d, client:e.target.value}))} />
+        <datalist id="client-list">
+          {clients.map(c=> <option key={c._id} value={c.name} />)}
+        </datalist>
       </label>
       <label className="label">Project
         <input className="input mt-1 w-full" value={data.projectName}
@@ -35,12 +50,18 @@ export default function StepReference({ data, setData }) {
                onChange={e=> setData(d=> ({...d, mixId:e.target.value}))} />
       </label>
       <label className="label">Truck No.
-        <input className="input mt-1 w-full" value={data.truckNo}
+        <input list="truck-list" className="input mt-1 w-full" value={data.truckNo}
                onChange={e=> setData(d=> ({...d, truckNo:e.target.value}))} />
+        <datalist id="truck-list">
+          {trucks.map(t=> <option key={t._id} value={t.truckNo}>{`${t.supplier||''} ${t.plant||''}`}</option>)}
+        </datalist>
       </label>
       <label className="label">Ticket No.
-        <input className="input mt-1 w-full" placeholder="e.g., 1039284" value={data.ticketNo}
-               onChange={e=> setData(d=> ({...d, ticketNo:e.target.value}))} />
+        <div className="flex gap-2 mt-1">
+          <input className="input w-full" placeholder="auto or enter" value={data.ticketNo}
+                 onChange={e=> setData(d=> ({...d, ticketNo:e.target.value}))} />
+          <button type="button" className="btn" onClick={()=> setData(d=> ({...d, ticketNo: genId('T')}))}>Auto</button>
+        </div>
       </label>
       <label className="label">Supplier
         <input className="input mt-1 w-full" value={data.supplier}
@@ -51,8 +72,7 @@ export default function StepReference({ data, setData }) {
                onChange={e=> setData(d=> ({...d, plant:e.target.value}))} />
       </label>
       <label className="label">Sampled by
-        <input className="input mt-1 w-full" value={data.sampledBy}
-               onChange={e=> setData(d=> ({...d, sampledBy:e.target.value}))} />
+        <input className="input mt-1 w-full" list="user-list" value={data.sampledBy} onChange={e=> setData(d=> ({...d, sampledBy:e.target.value}))} />
       </label>
       <label className="label">Sample Time
         <input className="input mt-1 w-full" placeholder="HH:MM" value={data.sampleTime}

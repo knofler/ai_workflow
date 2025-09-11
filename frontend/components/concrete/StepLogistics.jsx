@@ -1,16 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { baseUrls } from "../../lib/api";
 
 export default function StepLogistics({ data, setData }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const { auth } = baseUrls();
+  const [users, setUsers] = useState([]);
+  useEffect(()=>{ (async()=>{ try { const us = await fetch(`${auth}/auth/users`, { cache:'no-store' }).then(r=> r.json()); setUsers(us||[]); } catch {} })(); }, [auth]);
   return (
     <div className="space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <label className="label">Tested By
-          <input className="input mt-1 w-full" value={data.testedBy} onChange={e=> setData(d=> ({...d, testedBy:e.target.value}))} />
+          <input className="input mt-1 w-full" list="user-list" value={data.testedBy} onChange={e=> setData(d=> ({...d, testedBy:e.target.value}))} />
         </label>
         <label className="label">Field Representative
-          <input className="input mt-1 w-full" value={data.fieldRepresentative} onChange={e=> setData(d=> ({...d, fieldRepresentative:e.target.value}))} />
+          <input className="input mt-1 w-full" list="user-list" value={data.fieldRepresentative} onChange={e=> setData(d=> ({...d, fieldRepresentative:e.target.value}))} />
         </label>
       </div>
       <div className="grid md:grid-cols-4 gap-4">
@@ -94,6 +98,10 @@ export default function StepLogistics({ data, setData }) {
       <label className="label block">Notes
         <textarea className="input mt-1 w-full h-24" value={data.notes} onChange={e=> setData(d=> ({...d, notes:e.target.value}))} />
       </label>
+      {/* shared user datalist */}
+      <datalist id="user-list">
+        {users.map(u=> <option key={u.id} value={u.username} />)}
+      </datalist>
     </div>
   );
 }
