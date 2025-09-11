@@ -132,6 +132,45 @@ const fdtFormSchema = new mongoose.Schema({
 }, { timestamps: true });
 const FdtForm = mongoose.models.FdtForm || mongoose.model('FdtForm', fdtFormSchema);
 
+// Concrete Field Form (Single Mix) minimal schema
+const concreteFormSchema = new mongoose.Schema({
+	// Header
+	client: String,
+	date: { type: Date, required: true },
+	projectNo: String,
+	projectName: String,
+	weather: String,
+
+	// Delivery / Mix
+	supplier: String,
+	truckNo: String,
+	ticketNo: String,
+	mixDesign: String,
+	placementLocation: String,
+
+	// Fresh properties
+	slumpIn: Number,
+	airContentPct: Number,
+	unitWeightPcf: Number,
+	tempConcreteF: Number,
+	ambientTempF: Number,
+	waterAddedGal: Number,
+	admixtures: String,
+
+	// Cylinders cast
+	cylinders: { type: [{ qty: Number, sizeIn: Number, ageDays: Number, ids: String }], default: [] },
+
+	testedBy: String,
+	fieldRepresentative: String,
+	notes: String,
+
+	// Publication
+	published: { type: Boolean, default: false },
+	publishedAt: { type: Date },
+	reportUrl: String
+}, { timestamps: true });
+const ConcreteForm = mongoose.models.ConcreteForm || mongoose.model('ConcreteForm', concreteFormSchema);
+
 mongoose.connect(MONGO_URL).then(async ()=>{
 	console.log('[workflow-service] connected mongo');
 	// Seed minimal dummy data if empty
@@ -315,6 +354,55 @@ app.get('/fdt', async (_req, res) => {
 app.get('/fdt/:id', async (req, res) => {
 	try {
 		const item = await FdtForm.findById(req.params.id).lean();
+		if (!item) return res.status(404).json({ error: 'not_found' });
+		res.json(item);
+	} catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// --- Concrete Form Endpoints ---
+const cnum = z.union([z.number(), z.string().transform(v => v.trim() === '' ? undefined : Number(v)).pipe(z.number())]).optional();
+const cdateish = z.union([z.string(), z.date()]);
+const concreteSchema = z.object({
+	client: z.string().optional(),
+	date: cdateish,
+	projectNo: z.string().optional(),
+	projectName: z.string().optional(),
+	weather: z.string().optional(),
+
+	supplier: z.string().optional(),
+	truckNo: z.string().optional(),
+	ticketNo: z.string().optional(),
+	mixDesign: z.string().optional(),
+	placementLocation: z.string().optional(),
+
+	slumpIn: cnum,
+	airContentPct: cnum,
+	unitWeightPcf: cnum,
+	tempConcreteF: cnum,
+	ambientTempF: cnum,
+	waterAddedGal: cnum,
+	admixtures: z.string().optional(),
+
+	cylinders: z.array(z.object({ qty: cnum, sizeIn: cnum, ageDays: cnum, ids: z.string().optional() })).optional(),
+	testedBy: z.string().optional(),
+	fieldRepresentative: z.string().optional(),
+	notes: z.string().optional()
+});
+app.post('/concrete', async (req, res) => {
+	try {
+		const body = concreteSchema.parse(req.body || {});
+		const coerceDate = (d) => d ? (typeof d === 'string' ? new Date(d) : d) : undefined;
+		const doc = await ConcreteForm.create({ ...body, date: coerceDate(body.date) });
+		res.status(201).json(doc);
+	} catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/concrete', async (_req, res) => {
+	const items = await ConcreteForm.find().sort({ createdAt: -1 }).lean();
+	res.json(items);
+});
+app.get('/concrete/:id', async (req, res) => {
+	try {
+		const item = await ConcreteForm.findById(req.params.id).lean();
 		if (!item) return res.status(404).json({ error: 'not_found' });
 		res.json(item);
 	} catch (e) { res.status(400).json({ error: e.message }); }
