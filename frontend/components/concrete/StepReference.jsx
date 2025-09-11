@@ -9,6 +9,17 @@ export default function StepReference({ data, setData }) {
     try { const cs = await fetch(`${workflow}/masters/clients`, { cache:'no-store' }).then(r=> r.json()); setClients(cs||[]); } catch {}
     try { const ts = await fetch(`${workflow}/masters/trucks`, { cache:'no-store' }).then(r=> r.json()); setTrucks(ts||[]); } catch {}
   })(); }, [workflow]);
+  // When a Truck No. is selected, auto-fill Supplier and Plant if empty
+  useEffect(()=>{
+    if (!data?.truckNo) return;
+    const t = trucks.find(x => x.truckNo === data.truckNo);
+    if (!t) return;
+    setData(d => ({
+      ...d,
+      supplier: d.supplier && d.supplier.trim() !== '' ? d.supplier : (t.supplier || ''),
+      plant: d.plant && d.plant.trim() !== '' ? d.plant : (t.plant || '')
+    }));
+  }, [data.truckNo, trucks, setData]);
   const genId = (prefix) => `${prefix}-${new Date().toISOString().slice(2,10).replaceAll('-','')}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
   return (
     <div className="grid md:grid-cols-3 gap-4">
