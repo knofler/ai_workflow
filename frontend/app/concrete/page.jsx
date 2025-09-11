@@ -1,8 +1,14 @@
 "use client";
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Card from '../../components/Card';
 import { baseUrls, jsonFetch } from '../../lib/api';
 import { EQUIPMENT_DEFAULTS, EQUIPMENT_SUGGESTIONS, SPEC_DEFAULTS } from '../../lib/concreteDefaults';
+import StepReference from '../../components/concrete/StepReference';
+import StepPhysical from '../../components/concrete/StepPhysical';
+import StepWeatherEquipment from '../../components/concrete/StepWeatherEquipment';
+import StepStrengths from '../../components/concrete/StepStrengths';
+import StepCylinders from '../../components/concrete/StepCylinders';
+import StepLogistics from '../../components/concrete/StepLogistics';
 
 export default function ConcreteFormPage() {
   const { workflow } = baseUrls();
@@ -46,16 +52,27 @@ export default function ConcreteFormPage() {
   });
   const [result, setResult] = useState(null);
   const [err, setErr] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [step, setStep] = useState(0);
+  const steps = useMemo(()=>[
+    { key:'ref', title:'Reference Data', Component: StepReference },
+    { key:'phys', title:'Physical Properties', Component: StepPhysical },
+    { key:'we', title:'Weather & Equipment', Component: StepWeatherEquipment },
+    { key:'str', title:'Compressive Strengths', Component: StepStrengths },
+    { key:'cyl', title:'Cylinders Cast', Component: StepCylinders },
+    { key:'log', title:'Logistics & Notes', Component: StepLogistics },
+  ], []);
 
   const submit = async (e) => {
-    e.preventDefault(); setErr('');
+    if (e) e.preventDefault();
+    setErr('');
     try {
       // Map dynamic admixtures array to legacy fields (admixture1/2/3)
       const admixtures = data.admixtures || [];
       const [a1, a2, a3] = [admixtures[0], admixtures[1], admixtures[2]];
+      const ticketNo = data.ticketNo && String(data.ticketNo).trim().length ? data.ticketNo : `T-${Date.now().toString().slice(-8)}`;
       const payload = {
         ...data,
+        ticketNo,
         admixture1Type: a1?.type || '',
         admixture1Oz: a1?.oz || '',
         admixture2Type: a2?.type || '',
@@ -68,421 +85,30 @@ export default function ConcreteFormPage() {
     } catch (e) { setErr(String(e.message||e)); }
   };
 
-  const addCyl = () => setData(d=> ({ ...d, cylinders: [...d.cylinders, { qty:'', sizeIn:'6', ageDays:'28', ids:'' }] }));
-  const delCyl = (i) => setData(d=> ({ ...d, cylinders: d.cylinders.filter((_,idx)=> idx!==i) }));
-  const addAdmix = () => setData(d=> ({ ...d, admixtures: [...(d.admixtures||[]), { type:'', oz:'' }] }));
-  const delAdmix = (i) => setData(d=> ({ ...d, admixtures: (d.admixtures||[]).filter((_,idx)=> idx!==i) }));
+  const StepBody = steps[step]?.Component;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <Card title="Report of Field Inspection of Concrete – Single Mix">
-        <form className="space-y-6" onSubmit={submit}>
-          <section>
-            <div className="section-header">Reference Data</div>
-            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
-              <label className="label">Cylinder ID
-                <input className="input mt-1 w-full" placeholder="e.g., 24-0911-001" value={data.cylinderId} onChange={e=> setData(d=> ({...d, cylinderId:e.target.value}))} />
-              </label>
-              <label className="label">Date
-                <input type="date" className="input mt-1 w-full" value={data.date} onChange={e=> setData(d=> ({...d, date:e.target.value}))} />
-              </label>
-              <label className="label">Project No.
-                <input className="input mt-1 w-full" value={data.projectNo} onChange={e=> setData(d=> ({...d, projectNo:e.target.value}))} />
-              </label>
-              <label className="label">Client
-                <input className="input mt-1 w-full" value={data.client} onChange={e=> setData(d=> ({...d, client:e.target.value}))} />
-              </label>
-              <label className="label">Project
-                <input className="input mt-1 w-full" value={data.projectName} onChange={e=> setData(d=> ({...d, projectName:e.target.value}))} />
-              </label>
-              <label className="label">General Location
-                <input className="input mt-1 w-full" value={data.generalLocation} onChange={e=> setData(d=> ({...d, generalLocation:e.target.value}))} />
-              </label>
-              <label className="label">Specific Location
-                <input className="input mt-1 w-full" value={data.specificLocation} onChange={e=> setData(d=> ({...d, specificLocation:e.target.value}))} />
-              </label>
-              <label className="label">Mix ID
-                <input className="input mt-1 w-full" value={data.mixId} onChange={e=> setData(d=> ({...d, mixId:e.target.value}))} />
-              </label>
-              <label className="label">Truck No.
-                <input className="input mt-1 w-full" value={data.truckNo} onChange={e=> setData(d=> ({...d, truckNo:e.target.value}))} />
-              </label>
-              <label className="label">Ticket No.
-                <input className="input mt-1 w-full" placeholder="e.g., 1039284" value={data.ticketNo} onChange={e=> setData(d=> ({...d, ticketNo:e.target.value}))} />
-              </label>
-              <label className="label">Sample Time
-                <input className="input mt-1 w-full" placeholder="HH:MM" value={data.sampleTime} onChange={e=> setData(d=> ({...d, sampleTime:e.target.value}))} />
-              </label>
-              <label className="label">Batch Time
-                <input className="input mt-1 w-full" placeholder="HH:MM" value={data.batchTime} onChange={e=> setData(d=> ({...d, batchTime:e.target.value}))} />
-              </label>
-              <label className="label">Time Truck Finished Unloading
-                <input className="input mt-1 w-full" placeholder="HH:MM" value={data.timeTruckFinished} onChange={e=> setData(d=> ({...d, timeTruckFinished:e.target.value}))} />
-              </label>
-              <label className="label">Ambient Temp (°F)
-                <input className="input mt-1 w-full" placeholder="e.g., 72" value={data.ambientTempF} onChange={e=> setData(d=> ({...d, ambientTempF:e.target.value}))} />
-              </label>
-              <label className="label">Yards in load
-                <input className="input mt-1 w-full" placeholder="e.g., 8.5" value={data.yardsInLoad} onChange={e=> setData(d=> ({...d, yardsInLoad:e.target.value}))} />
-              </label>
-              <label className="label">Cumulative Yards Placed
-                <input className="input mt-1 w-full" placeholder="e.g., 32" value={data.cumulativeYardsPlaced} onChange={e=> setData(d=> ({...d, cumulativeYardsPlaced:e.target.value}))} />
-              </label>
-              <label className="label">Water/Cement Ratio
-                <input className="input mt-1 w-full" placeholder="e.g., 0.45" value={data.waterCementRatio} onChange={e=> setData(d=> ({...d, waterCementRatio:e.target.value}))} />
-              </label>
-              <label className="label">Yards in load
-                <input className="input mt-1 w-full" value={data.yardsInLoad} onChange={e=> setData(d=> ({...d, yardsInLoad:e.target.value}))} />
-              </label>
-              <label className="label">Cumulative Yards Placed
-                <input className="input mt-1 w-full" value={data.cumulativeYardsPlaced} onChange={e=> setData(d=> ({...d, cumulativeYardsPlaced:e.target.value}))} />
-              </label>
-              <label className="label">Water Added (gals)
-                <input className="input mt-1 w-full" value={data.waterAddedGal} onChange={e=> setData(d=> ({...d, waterAddedGal:e.target.value}))} />
-              </label>
-              <label className="label">Water/Cement Ratio
-                <input className="input mt-1 w-full" value={data.waterCementRatio} onChange={e=> setData(d=> ({...d, waterCementRatio:e.target.value}))} />
-              </label>
-            </div>
-          </section>
-          <section>
-            <div className="section-header">Physical Properties</div>
-            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
-              <label className="label">Slump (in)
-                <input className="input mt-1 w-full" value={data.slumpIn} onChange={e=> setData(d=> ({...d, slumpIn:e.target.value}))} />
-              </label>
-              <label className="label">Slump Spec Min
-                <input className="input mt-1 w-full" value={data.specSlumpMin} onChange={e=> setData(d=> ({...d, specSlumpMin:e.target.value}))} />
-              </label>
-              <label className="label">Slump Spec Max
-                <input className="input mt-1 w-full" value={data.specSlumpMax} onChange={e=> setData(d=> ({...d, specSlumpMax:e.target.value}))} />
-              </label>
-              <label className="label">Air Content (%)
-                <input className="input mt-1 w-full" placeholder="e.g., 6.5" value={data.airContentPct} onChange={e=> setData(d=> ({...d, airContentPct:e.target.value}))} />
-              </label>
-              <label className="label">Air Spec Min (%)
-                <input className="input mt-1 w-full" value={data.specAirMin} onChange={e=> setData(d=> ({...d, specAirMin:e.target.value}))} />
-              </label>
-              <label className="label">Air Spec Max (%)
-                <input className="input mt-1 w-full" value={data.specAirMax} onChange={e=> setData(d=> ({...d, specAirMax:e.target.value}))} />
-              </label>
-              <label className="label">Unit Weight (pcf)
-                <input className="input mt-1 w-full" placeholder="e.g., 145" value={data.unitWeightPcf} onChange={e=> setData(d=> ({...d, unitWeightPcf:e.target.value}))} />
-              </label>
-              <label className="label">Concrete Temp (F)
-                <input className="input mt-1 w-full" placeholder="e.g., 70" value={data.tempConcreteF} onChange={e=> setData(d=> ({...d, tempConcreteF:e.target.value}))} />
-              </label>
-              <label className="label">Ambient Temp (F)
-                <input className="input mt-1 w-full" value={data.ambientTempF} onChange={e=> setData(d=> ({...d, ambientTempF:e.target.value}))} />
-              </label>
-              <label className="label">Water Added (gal)
-                <input className="input mt-1 w-full" value={data.waterAddedGal} onChange={e=> setData(d=> ({...d, waterAddedGal:e.target.value}))} />
-              </label>
-              <label className="label">Yield (CY)
-                <input className="input mt-1 w-full" value={data.yieldCY} onChange={e=> setData(d=> ({...d, yieldCY:e.target.value}))} />
-              </label>
-              <label className="label">Relative Yield
-                <input className="input mt-1 w-full" value={data.relativeYield} onChange={e=> setData(d=> ({...d, relativeYield:e.target.value}))} />
-              </label>
-              <label className="label">Mix Design Strength (psi)
-                <input className="input mt-1 w-full" value={data.mixDesignStrengthPsi} onChange={e=> setData(d=> ({...d, mixDesignStrengthPsi:e.target.value}))} />
-              </label>
-              <label className="label">Required Strength (psi)
-                <input className="input mt-1 w-full" value={data.requiredStrengthPsi} onChange={e=> setData(d=> ({...d, requiredStrengthPsi:e.target.value}))} />
-              </label>
-              <div className="md:col-span-3 grid md:grid-cols-6 gap-4">
-                <label className="label">Cement (lb)
-                  <input className="input mt-1 w-full" value={data.cementLb} onChange={e=> setData(d=> ({...d, cementLb:e.target.value}))} />
-                </label>
-                <label className="label">Other Cementitious (lb)
-                  <input className="input mt-1 w-full" value={data.otherCementitiousLb} onChange={e=> setData(d=> ({...d, otherCementitiousLb:e.target.value}))} />
-                </label>
-                <label className="label">Water (lb)
-                  <input className="input mt-1 w-full" value={data.waterLb} onChange={e=> setData(d=> ({...d, waterLb:e.target.value}))} />
-                </label>
-                <label className="label">Excess Water (Coarse) (lb)
-                  <input className="input mt-1 w-full" value={data.excessWaterCoarseLb} onChange={e=> setData(d=> ({...d, excessWaterCoarseLb:e.target.value}))} />
-                </label>
-                <label className="label">Excess Water (Fine) (lb)
-                  <input className="input mt-1 w-full" value={data.excessWaterFineLb} onChange={e=> setData(d=> ({...d, excessWaterFineLb:e.target.value}))} />
-                </label>
-                <label className="label">Fine Aggregate (lb)
-                  <input className="input mt-1 w-full" value={data.fineAggregateLb} onChange={e=> setData(d=> ({...d, fineAggregateLb:e.target.value}))} />
-                </label>
-                <label className="label">Course Aggregate 1 (lb)
-                  <input className="input mt-1 w-full" value={data.coarseAggregate1Lb} onChange={e=> setData(d=> ({...d, coarseAggregate1Lb:e.target.value}))} />
-                </label>
-                <label className="label">Course Aggregate 2 (lb)
-                  <input className="input mt-1 w-full" value={data.coarseAggregate2Lb} onChange={e=> setData(d=> ({...d, coarseAggregate2Lb:e.target.value}))} />
-                </label>
-                <label className="label">Max Aggregate Size (in)
-                  <input list="maxAggregateSizeIn-list" className="input mt-1 w-full" value={data.maxAggregateSizeIn} onChange={e=> setData(d=> ({...d, maxAggregateSizeIn:e.target.value}))} />
-                </label>
-                <div className="md:col-span-6">
-                  <div className="text-sm font-semibold text-gray-700 mb-2">Admixtures</div>
-                  <div className="space-y-3">
-                    {(data.admixtures||[]).map((a,i)=> (
-                      <div key={i} className="grid md:grid-cols-6 gap-4 items-end">
-                        <label className="label md:col-span-2">Type
-                          <input className="input mt-1 w-full" value={a.type} onChange={e=> setData(d=> ({...d, admixtures: d.admixtures.map((x,idx)=> idx===i?{...x, type:e.target.value}:x) }))} />
-                        </label>
-                        <label className="label md:col-span-2">Amount (oz)
-                          <input className="input mt-1 w-full" value={a.oz} onChange={e=> setData(d=> ({...d, admixtures: d.admixtures.map((x,idx)=> idx===i?{...x, oz:e.target.value}:x) }))} />
-                        </label>
-                        <div className="md:col-span-2 text-right">
-                          <button type="button" className="btn" onClick={()=> delAdmix(i)}>− Remove</button>
-                        </div>
-                      </div>
-                    ))}
-                    <div>
-                      <button type="button" className="btn" onClick={addAdmix}>+ Add Admixture</button>
-                    </div>
-                  </div>
-                </div>
-                <label className="label">Total Batch Weight (lb)
-                  <input className="input mt-1 w-full" value={data.totalBatchWeightLb} onChange={e=> setData(d=> ({...d, totalBatchWeightLb:e.target.value}))} />
-                </label>
-              </div>
-            </div>
-          </section>
-          <section>
-            <div className="section-header">Weather</div>
-            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
-              <label className="label">Weather
-                <input className="input mt-1 w-full" value={data.weather} onChange={e=> setData(d=> ({...d, weather:e.target.value}))} />
-              </label>
-              <label className="label">Est. Wind (mph)
-                <input className="input mt-1 w-full" value={data.estWindMph} onChange={e=> setData(d=> ({...d, estWindMph:e.target.value}))} />
-              </label>
-              <label className="label">Est. RH (%)
-                <input className="input mt-1 w-full" value={data.estRhPct} onChange={e=> setData(d=> ({...d, estRhPct:e.target.value}))} />
-              </label>
-            </div>
-          </section>
-          <section>
-            <div className="section-header">Weather & Equipment</div>
-            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
-              <div className="md:col-span-3 font-semibold text-sm">Equipment identification</div>
-              <label className="label">Slump Cone ID
-                <input list="slumpConeId-list" className="input mt-1 w-full" value={data.slumpConeId} onChange={e=> setData(d=> ({...d, slumpConeId:e.target.value}))} />
-              </label>
-              <label className="label">Thermometer ID
-                <input list="thermometerId-list" className="input mt-1 w-full" value={data.thermometerId} onChange={e=> setData(d=> ({...d, thermometerId:e.target.value}))} />
-              </label>
-              <label className="label">Air Meter ID
-                <input list="airMeterId-list" className="input mt-1 w-full" value={data.airMeterId} onChange={e=> setData(d=> ({...d, airMeterId:e.target.value}))} />
-              </label>
-              <label className="label">Unit Weight Measure ID
-                <input list="unitWeightMeasureId-list" className="input mt-1 w-full" value={data.unitWeightMeasureId} onChange={e=> setData(d=> ({...d, unitWeightMeasureId:e.target.value}))} />
-              </label>
-              <label className="label">Scale ID
-                <input list="scaleId-list" className="input mt-1 w-full" value={data.scaleId} onChange={e=> setData(d=> ({...d, scaleId:e.target.value}))} />
-              </label>
-            </div>
-          </section>
-          <section>
-            <div className="section-header">Compressive Strengths</div>
-            <div className="p-4 border rounded-b-md space-y-4">
-              {data.strengths.map((s,i)=> (
-                <div key={i} className="rounded-md border p-4 bg-white shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-white text-sm font-semibold">{s.rowId||String(i+1)}</span>
-                      <div className="text-sm text-gray-600">Row details</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths: d.strengths.filter((_,idx)=> idx!==i)}))}>− Remove</button>
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <label className="label">Row
-                      <input className="input mt-1 w-full" value={s.rowId||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, rowId:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Age (days)
-                      <input className="input mt-1 w-full" value={s.ageDays||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, ageDays:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Test Date
-                      <input type="date" className="input mt-1 w-full" value={s.testDate||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, testDate:e.target.value}:x) }))} />
-                    </label>
-                  </div>
-                  <div className="mt-4 text-xs font-semibold text-gray-700 uppercase tracking-wide">Dimensions</div>
-                  <div className="grid md:grid-cols-6 gap-4 mt-2">
-                    <label className="label">Dia 1 (in)
-                      <input className="input mt-1 w-full" value={s.diameterIn1||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, diameterIn1:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Dia 2 (in)
-                      <input className="input mt-1 w-full" value={s.diameterIn2||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, diameterIn2:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Len 1 (in)
-                      <input className="input mt-1 w-full" value={s.lengthIn1||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn1:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Len 2 (in)
-                      <input className="input mt-1 w-full" value={s.lengthIn2||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn2:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Len 3 (in)
-                      <input className="input mt-1 w-full" value={s.lengthIn3||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn3:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Mass (gm)
-                      <input className="input mt-1 w-full" value={s.massGm||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, massGm:e.target.value}:x) }))} />
-                    </label>
-                  </div>
-                  <div className="mt-4 text-xs font-semibold text-gray-700 uppercase tracking-wide">Load & Geometry</div>
-                  <div className="grid md:grid-cols-4 gap-4 mt-2">
-                    <label className="label">Type of Cap
-                      <input className="input mt-1 w-full" value={s.capType||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, capType:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Total Load (lbf)
-                      <input className="input mt-1 w-full" value={s.totalLoadLbf||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, totalLoadLbf:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Area (in²)
-                      <input className="input mt-1 w-full" value={s.areaIn2||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, areaIn2:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Measured Density (pcf)
-                      <input className="input mt-1 w-full" value={s.measuredDensityPcf||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, measuredDensityPcf:e.target.value}:x) }))} />
-                    </label>
-                  </div>
-                  <div className="mt-4 text-xs font-semibold text-gray-700 uppercase tracking-wide">Results</div>
-                  <div className="grid md:grid-cols-3 gap-4 mt-2">
-                    <label className="label">Measured Strength (psi)
-                      <input className="input mt-1 w-full" value={s.measuredStrengthPsi||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, measuredStrengthPsi:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Specified 28-day Strength (psi)
-                      <input className="input mt-1 w-full" value={s.specified28DayStrengthPsi||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, specified28DayStrengthPsi:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Type of Fracture
-                      <input className="input mt-1 w-full" value={s.typeOfFracture||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, typeOfFracture:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Person Performing Test
-                      <input className="input mt-1 w-full" value={s.personPerformingTest||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, personPerformingTest:e.target.value}:x) }))} />
-                    </label>
-                  </div>
-                </div>
+        <div className="space-y-6">
+          <div className="section-header">{steps[step].title}</div>
+          <div className="p-4 border rounded-b-md">
+            {StepBody && <StepBody data={data} setData={setData} />}
+          </div>
+          <div className="flex justify-between items-center">
+            <button className="btn" disabled={step===0} onClick={()=> setStep(s=> Math.max(0, s-1))}>Back</button>
+            <div className="flex items-center gap-2">
+              {steps.map((s,i)=> (
+                <button key={s.key} aria-label={`Step ${i+1}`} className={`h-2 w-2 rounded-full ${i===step? 'bg-indigo-600':'bg-gray-300'}`} onClick={()=> setStep(i)} />
               ))}
-              <div className="pt-2"><button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths:[...d.strengths, { rowId:'', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', lengthIn3:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }]}))}>+ Add Strength</button></div>
             </div>
-          </section>
-
-          <section>
-            <div className="section-header">Cylinders Cast</div>
-            <div className="p-4 border rounded-b-md space-y-4">
-              {data.cylinders.map((c,i)=> (
-                <div key={i} className="rounded-md border p-4 bg-white shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm text-gray-600 font-medium">Cylinder #{i+1}</div>
-                    <div><button type="button" className="btn" onClick={()=> delCyl(i)}>− Remove</button></div>
-                  </div>
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <label className="label">Qty
-                      <input className="input mt-1 w-full" placeholder="e.g., 2" value={c.qty} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, qty:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Size (in)
-                      <input className="input mt-1 w-full" placeholder="e.g., 6" value={c.sizeIn} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, sizeIn:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">Age (days)
-                      <input className="input mt-1 w-full" placeholder="e.g., 7" value={c.ageDays} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, ageDays:e.target.value}:x) }))} />
-                    </label>
-                    <label className="label">IDs
-                      <input className="input mt-1 w-full" placeholder="e.g., C1, C2" value={c.ids} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, ids:e.target.value}:x) }))} />
-                    </label>
-                  </div>
-                </div>
-              ))}
-              <div className="pt-2"><button type="button" className="btn" onClick={addCyl}>+ Add Cylinder</button></div>
-            </div>
-          </section>
-
-          <section>
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="label">Tested By
-                <input className="input mt-1 w-full" value={data.testedBy} onChange={e=> setData(d=> ({...d, testedBy:e.target.value}))} />
-              </label>
-              <label className="label">Field Representative
-                <input className="input mt-1 w-full" value={data.fieldRepresentative} onChange={e=> setData(d=> ({...d, fieldRepresentative:e.target.value}))} />
-              </label>
-            </div>
-            <div className="grid md:grid-cols-4 gap-4 mt-4">
-              <label className="label">Comp. Machine ID
-                <input list="compMachineId-list" className="input mt-1 w-full" value={data.compMachineId} onChange={e=> setData(d=> ({...d, compMachineId:e.target.value}))} />
-              </label>
-              <label className="label">Caliper ID
-                <input list="caliperId-list" className="input mt-1 w-full" value={data.caliperId} onChange={e=> setData(d=> ({...d, caliperId:e.target.value}))} />
-              </label>
-              <label className="label">Scale ID
-                <input list="compScaleId-list" className="input mt-1 w-full" value={data.compScaleId} onChange={e=> setData(d=> ({...d, compScaleId:e.target.value}))} />
-              </label>
-              <label className="label">Ret. Rings
-                <input list="retRings-list" className="input mt-1 w-full" value={data.retRings} onChange={e=> setData(d=> ({...d, retRings:e.target.value}))} />
-              </label>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4 mt-4">
-              <label className="label">Cast In Field
-                <input type="checkbox" className="ml-2" checked={data.cylindersCastInField} onChange={e=> setData(d=> ({...d, cylindersCastInField:e.target.checked}))} />
-              </label>
-              <label className="label">Cast In Lab
-                <input type="checkbox" className="ml-2" checked={data.cylindersCastInLab} onChange={e=> setData(d=> ({...d, cylindersCastInLab:e.target.checked}))} />
-              </label>
-              <label className="label">Time Cylinders Molded
-                <input className="input mt-1 w-full" value={data.timeCylindersMolded} onChange={e=> setData(d=> ({...d, timeCylindersMolded:e.target.value}))} />
-              </label>
-              <label className="label">First 24h Temp Range
-                <input className="input mt-1 w-full" placeholder="e.g., 68–74°F" value={data.cylindersTempRangeFirst24h} onChange={e=> setData(d=> ({...d, cylindersTempRangeFirst24h:e.target.value}))} />
-              </label>
-              <label className="label">Cylinders Cured At
-                <input className="input mt-1 w-full" placeholder="e.g., Field/Lab" value={data.whereCylindersCured} onChange={e=> setData(d=> ({...d, whereCylindersCured:e.target.value}))} />
-              </label>
-              <label className="label">Field placement observations
-                <input className="input mt-1 w-full" placeholder="Short notes" value={data.fieldPlacementObservations} onChange={e=> setData(d=> ({...d, fieldPlacementObservations:e.target.value}))} />
-              </label>
-              <label className="label">Remarks
-                <input className="input mt-1 w-full" placeholder="Optional" value={data.remarks} onChange={e=> setData(d=> ({...d, remarks:e.target.value}))} />
-              </label>
-            </div>
-            <div className="mt-4">
-              <button type="button" className="btn" onClick={()=> setShowAdvanced(s=> !s)}>
-                {showAdvanced ? '− Hide advanced logistics' : '+ Show advanced logistics'}
-              </button>
-            </div>
-            {showAdvanced && (
-              <div className="grid md:grid-cols-3 gap-4 mt-4 p-4 border rounded-md bg-gray-50">
-                <label className="label">Date Received in Lab
-                  <input type="date" className="input mt-1 w-full" value={data.dateCylindersReceivedInLab} onChange={e=> setData(d=> ({...d, dateCylindersReceivedInLab:e.target.value}))} />
-                </label>
-                <label className="label">Pick up by
-                  <input className="input mt-1 w-full" placeholder="Name / Company" value={data.pickUpBy} onChange={e=> setData(d=> ({...d, pickUpBy:e.target.value}))} />
-                </label>
-                <label className="label">Cylinders condition
-                  <select className="input mt-1 w-full" value={data.cylindersCondition} onChange={e=> setData(d=> ({...d, cylindersCondition:e.target.value}))}>
-                    <option value=""></option>
-                    <option>Good</option>
-                    <option>Fair</option>
-                    <option>Poor</option>
-                  </select>
-                </label>
-                <label className="label">Chargeable Time
-                  <input className="input mt-1 w-full" placeholder="e.g., 1.5 h" value={data.chargeableTime} onChange={e=> setData(d=> ({...d, chargeableTime:e.target.value}))} />
-                </label>
-                <label className="label">Test pick up (h)
-                  <input className="input mt-1 w-full" value={data.testPickUpHours} onChange={e=> setData(d=> ({...d, testPickUpHours:e.target.value}))} />
-                </label>
-                <label className="label">Test pick up (min)
-                  <input className="input mt-1 w-full" value={data.testPickUpMinutes||''} onChange={e=> setData(d=> ({...d, testPickUpMinutes:e.target.value}))} />
-                </label>
-                <label className="label">Delayed (h)
-                  <input className="input mt-1 w-full" value={data.delayedHours} onChange={e=> setData(d=> ({...d, delayedHours:e.target.value}))} />
-                </label>
-                <label className="label">Delayed (min)
-                  <input className="input mt-1 w-full" value={data.delayedMinutes||''} onChange={e=> setData(d=> ({...d, delayedMinutes:e.target.value}))} />
-                </label>
-                <label className="label">Why?
-                  <input className="input mt-1 w-full" value={data.delayedWhy} onChange={e=> setData(d=> ({...d, delayedWhy:e.target.value}))} />
-                </label>
-              </div>
+            {step < steps.length-1 ? (
+              <button className="btn" onClick={()=> setStep(s=> Math.min(steps.length-1, s+1))}>Next</button>
+            ) : (
+              <button className="btn" onClick={submit}>Submit</button>
             )}
-            <label className="label block mt-4">Notes
-              <textarea className="input mt-1 w-full h-24" value={data.notes} onChange={e=> setData(d=> ({...d, notes:e.target.value}))} />
-            </label>
-          </section>
-        </form>
+          </div>
+        </div>
         {err && <p className="text-red-400 mt-3">{err}</p>}
       </Card>
 
@@ -492,9 +118,12 @@ export default function ConcreteFormPage() {
           <a className="btn mt-3 inline-block" href={`/concrete/${result._id}`}>Open Report</a>
         </Card>
       )}
-      <div className="fixed bottom-4 right-4 z-50">
-        <button className="btn shadow-lg" onClick={submit}>Submit</button>
-      </div>
+      {/* Sticky submit kept for accessibility on mobile when at last step */}
+      {step===steps.length-1 && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <button className="btn shadow-lg" onClick={submit}>Submit</button>
+        </div>
+      )}
       {/* Datalists for suggestions */}
       {Object.entries(EQUIPMENT_SUGGESTIONS).map(([key, arr]) => (
         <datalist id={`${key}-list`} key={key}>
