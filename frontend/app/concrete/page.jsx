@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '../../components/Card';
 import { baseUrls, jsonFetch } from '../../lib/api';
 import { EQUIPMENT_DEFAULTS, EQUIPMENT_SUGGESTIONS, SPEC_DEFAULTS } from '../../lib/concreteDefaults';
@@ -53,6 +53,8 @@ export default function ConcreteFormPage() {
   const [result, setResult] = useState(null);
   const [err, setErr] = useState('');
   const [step, setStep] = useState(0);
+  const [users, setUsers] = useState([]);
+  useEffect(()=>{ (async()=>{ try { const base = baseUrls(); const us = await fetch(`${base.auth}/auth/users`, { cache:'no-store' }).then(r=> r.json()); setUsers(us||[]); } catch {} })(); }, []);
   const steps = useMemo(()=>[
     { key:'ref', title:'Reference Data', Component: StepReference },
     { key:'phys', title:'Physical Properties', Component: StepPhysical },
@@ -141,6 +143,10 @@ export default function ConcreteFormPage() {
       )}
       {/* Removed floating submit; footer inside the card */}
       {/* Datalists for suggestions */}
+      {/* Shared users datalist for people fields */}
+      <datalist id="user-list">
+        {users.map(u=> <option key={u.id} value={u.username} />)}
+      </datalist>
       {Object.entries(EQUIPMENT_SUGGESTIONS).map(([key, arr]) => (
         <datalist id={`${key}-list`} key={key}>
           {arr.map((v) => (

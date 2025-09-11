@@ -3,6 +3,7 @@ export default function StepCylinders({ data, setData }) {
   const addCyl = () => setData(d=> ({...d, cylinders: [...(d.cylinders||[]), { id:"", diameterIn:"", heightIn:"", massLb:"", notes:"" }]}));
   const removeCyl = (idx) => setData(d=> ({...d, cylinders: (d.cylinders||[]).filter((_,i)=> i!==idx)}));
   const updateCyl = (idx, key, val) => setData(d=> ({...d, cylinders: (d.cylinders||[]).map((c,i)=> i===idx? {...c, [key]: val}: c)}));
+  const genId = () => `CYL-${new Date().toISOString().slice(2,10).replaceAll('-','')}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
 
   const rows = data.cylinders || [];
 
@@ -11,7 +12,10 @@ export default function StepCylinders({ data, setData }) {
       {(rows.length? rows: [{ id:"", diameterIn:"", heightIn:"", massLb:"", notes:"" }]).map((c, idx)=> (
         <div key={idx} className="rounded-lg border p-4 shadow-sm grid md:grid-cols-5 gap-3">
           <label className="label">ID
-            <input className="input mt-1 w-full" value={c.id} onChange={e=> updateCyl(idx, 'id', e.target.value)} />
+            <div className="flex gap-2 mt-1">
+              <input className="input w-full" value={c.id} onChange={e=> updateCyl(idx, 'id', e.target.value)} />
+              <button type="button" className="btn btn-outline" onClick={()=> updateCyl(idx, 'id', data.cylinderId || genId())}>Auto</button>
+            </div>
           </label>
           <label className="label">Diameter (in)
             <input className="input mt-1 w-full" placeholder="4" value={c.diameterIn} onChange={e=> updateCyl(idx, 'diameterIn', e.target.value)} />
