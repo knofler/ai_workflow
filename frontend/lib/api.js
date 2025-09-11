@@ -1,10 +1,8 @@
 export function baseUrls() {
   const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000';
-  return {
-    gateway,
-    auth: gateway.replace(':4000', ':5001'),
-    workflow: gateway.replace(':4000', ':5002'),
-  };
+  const auth = process.env.NEXT_PUBLIC_AUTH_URL || gateway.replace(':4000', ':5001');
+  const workflow = process.env.NEXT_PUBLIC_WORKFLOW_URL || gateway.replace(':4000', ':5002');
+  return { gateway, auth, workflow };
 }
 
 export async function jsonFetch(url, opts = {}) {

@@ -1,6 +1,7 @@
 export default async function ConcreteReport({ params }) {
-  const base = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000';
-  const workflow = base.replace(':4000', ':5002');
+  const workflow = process.env.NEXT_PUBLIC_WORKFLOW_URL
+    || process.env.WORKFLOW_INTERNAL_URL
+    || (process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000').replace(':4000', ':5002');
   const doc = await fetch(`${workflow}/concrete/${params.id}`, { cache: 'no-store' }).then(r=> r.json());
   return (
     <div className="max-w-5xl mx-auto p-6 text-[13px]">

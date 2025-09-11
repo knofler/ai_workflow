@@ -1,7 +1,8 @@
 export default async function ConcreteReports() {
-  // Prefer internal service URL when running inside Docker/SSR, else fall back to localhost ports
-  const workflow = process.env.GATEWAY_INTERNAL_URL ? (process.env.WORKFLOW_INTERNAL_URL || 'http://workflow-service:5002')
-                                                    : (process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000').replace(':4000', ':5002');
+  // Prefer explicit WORKFLOW URL for Vercel; else use internal URL in Docker; else localhost dev
+  const workflow = process.env.NEXT_PUBLIC_WORKFLOW_URL
+    || process.env.WORKFLOW_INTERNAL_URL
+    || (process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4000').replace(':4000', ':5002');
   let items = [];
   try {
     const res = await fetch(`${workflow}/concrete`, { cache: 'no-store' });
