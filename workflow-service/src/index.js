@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { ensureCorrelationId, createLogger, withSpan } from '../shared-lib/dist/index.js';
+import fetch from 'node-fetch';
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,7 @@ app.use((req, _res, next) => { req.logger = createLogger('workflow-service', req
 
 const PORT = process.env.PORT || 5002;
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://mongo:27017/workflow';
+const NOTIFY_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:5003';
 
 // Schemas
 const workflowDefinitionSchema = new mongoose.Schema({
@@ -446,6 +448,10 @@ app.post('/workflow-instances/:id/events', async (req, res) => {
 			try {
 				const id = inst.context.fdtId;
 				await FdtForm.findByIdAndUpdate(id, { published: true, publishedAt: new Date(), reportUrl: `/fdt/${id}` });
+				// notify
+				try {
+					await fetch(`${NOTIFY_URL}/notify/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'fdt_published', id, instanceId: inst._id, url: `/fdt/${id}` }) });
+				} catch (e) { req.logger?.warn?.('notify_failed', { error: e?.message }); }
 				req.logger?.info?.('auto_publish_report', { fdtId: id });
 			} catch (e) { req.logger?.warn?.('auto_publish_failed', { error: e?.message }); }
 		}

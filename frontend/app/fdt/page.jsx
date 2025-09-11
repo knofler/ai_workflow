@@ -129,6 +129,17 @@ export default function FdtFormPage() {
     setLocationTests(prev => renumber(prev.filter((_, idx) => idx !== i)));
   };
 
+  const guessMaterial = (text) => {
+    const t = (text||'').toLowerCase();
+    if (t.includes('improved')) return '4';
+    if (t.includes('subgrade')) return '3';
+    if (t.includes('sub-base') || t.includes('subbase')) return '2';
+    if (t.includes('base')) return '1';
+    if (t.includes('surface') || t.includes('asphalt') || t.includes('pavement')) return '5';
+    if (t.includes('fill') || t.includes('embank')) return '6';
+    return '';
+  };
+
   // guards: minimal required fields
   const canSubmit = () => {
     if (!header.date || !header.projectNo || !header.projectName) return false;
@@ -305,7 +316,7 @@ export default function FdtFormPage() {
                       </tr>
                       <tr key={`lrow-${i}`}>
                         <td className="text-right pr-2">Location:</td>
-                        <td colSpan={7}><input className="input w-full" value={locationTests[i]?.location || ''} onChange={e=> setLocationTests(prev=> prev.map((x,idx)=> idx===i?{...x, location:e.target.value}:x))} /></td>
+                        <td colSpan={7}><input className="input w-full" value={locationTests[i]?.location || ''} onChange={e=> setLocationTests(prev=> prev.map((x,idx)=> idx===i?{...x, location:e.target.value, material: x.material || guessMaterial(e.target.value)}:x))} /></td>
                         <td>
                           <select className="input w-full" value={locationTests[i]?.material || ''} onChange={e=> setLocationTests(prev=> prev.map((x,idx)=> idx===i?{...x, material:e.target.value}:x))}>
                             <option value="">Material</option>
