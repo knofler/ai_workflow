@@ -75,7 +75,7 @@ export default function ConcreteFormPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <Card title="Report of Field Inspection of Concrete – Single Mix" action={<button className="btn" onClick={submit}>Submit</button>}>
+      <Card title="Report of Field Inspection of Concrete – Single Mix">
         <form className="space-y-6" onSubmit={submit}>
           <section>
             <div className="section-header">Reference Data</div>
