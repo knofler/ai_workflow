@@ -11,12 +11,20 @@ export default async function Home() {
     health = { error: e.message, tried: `${internalGateway}/health` };
   }
   return (
-    <main style={{ fontFamily: 'system-ui', padding: '2rem' }}>
-      <h1>Workflow Platform UI</h1>
-      <p>Public Gateway URL: {publicGateway}</p>
-      <p style={{ fontSize: '0.9rem', opacity: 0.7 }}>Internal fetch base: {internalGateway}</p>
-      <h2>Gateway Health</h2>
-      <pre style={{ background: '#111', color: '#0f0', padding: '1rem', overflowX: 'auto' }}>{JSON.stringify(health, null, 2)}</pre>
+    <main className="space-y-6">
+      <section className="card p-4">
+        <h1 className="text-2xl font-semibold mb-2">Civil Engineering Workflow</h1>
+  <p className="text-zinc-700">Public Gateway URL: {publicGateway}</p>
+  <p className="text-zinc-500 text-sm">Internal fetch base: {internalGateway}</p>
+        <div className="mt-4 flex gap-3">
+          <a className="btn" href="/definitions">Definitions</a>
+          <a className="btn" href="/instances">Instances</a>
+        </div>
+      </section>
+      <section className="card p-4">
+        <h2 className="text-lg font-semibold mb-2">Gateway Health</h2>
+  <pre className="codeblock">{JSON.stringify(health, null, 2)}</pre>
+      </section>
     </main>
   );
 }

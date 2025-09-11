@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light theme */
+  --bg: #f8fafc; /* zinc-50 */
+  --fg: #0f172a; /* slate-900 */
+  --muted: #475569; /* slate-600 */
+  --accent: #2563eb; /* blue-600 */
+}
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+
+.card { @apply bg-white rounded-xl border border-zinc-200 shadow-sm; }
+.btn { @apply inline-flex items-center gap-2 px-3.5 py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 disabled:cursor-not-allowed; }
+.input { @apply px-3 py-2.5 rounded-md bg-white border border-zinc-300 text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600; }
+.label { @apply text-sm font-medium text-zinc-700; }
+
+.table { @apply w-full border-separate border-spacing-y-1; }
+.table thead th { @apply text-left text-zinc-600 text-xs uppercase tracking-wider pb-2; }
+.table tbody tr { @apply hover:bg-zinc-50; }
+.table td { @apply p-3 align-top text-sm text-zinc-800; }
+
+/* Code block */
+.codeblock { @apply bg-zinc-50 border border-zinc-200 rounded-md p-3 text-xs text-zinc-800 overflow-auto; }

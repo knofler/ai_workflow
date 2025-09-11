@@ -25,16 +25,21 @@ export default function WorkflowsPage() {
     } catch (e) { setMessage(e.message); }
   }
 
-  return <main style={{ fontFamily:'system-ui', padding:'2rem' }}>
-    <h1>Workflow Dashboard</h1>
-    <form onSubmit={createDef} style={{ display:'flex', gap:'0.5rem' }}>
-      <input value={name} onChange={e=>setName(e.target.value)} />
-      <button>Create</button>
-    </form>
-    {message && <p>{message}</p>}
-    <h2>Definitions</h2>
-    <ul>
-      {defs.map(d => <li key={d._id || d.id}>{d.name} v{d.version}</li>)}
-    </ul>
+  return <main className="space-y-6">
+    <section className="card p-4">
+      <h1 className="text-xl font-semibold mb-3">Workflow Dashboard (legacy)</h1>
+  <p className="text-zinc-700 mb-3">Prefer the modern <a className="text-blue-700 underline" href="/definitions">Definitions</a> page.</p>
+      <form onSubmit={createDef} className="flex gap-2">
+        <input className="input" value={name} onChange={e=>setName(e.target.value)} />
+        <button className="btn">Create</button>
+      </form>
+  {message && <p className="mt-2 text-zinc-700">{message}</p>}
+    </section>
+    <section className="card p-4">
+      <h2 className="text-lg font-semibold mb-2">Definitions</h2>
+      <ul className="space-y-1">
+        {defs.map(d => <li key={d._id || d.id}>{d.name} v{d.version}</li>)}
+      </ul>
+    </section>
   </main>;
 }
