@@ -21,7 +21,8 @@ export default function ConcreteFormPage() {
     mixDesignStrengthPsi:'', requiredStrengthPsi:'',
     cementLb:'', otherCementitiousLb:'', waterLb:'', excessWaterCoarseLb:'', excessWaterFineLb:'',
   fineAggregateLb:'', coarseAggregate1Lb:'', coarseAggregate2Lb:'',
-  maxAggregateSizeIn: EQUIPMENT_DEFAULTS.maxAggregateSizeIn, admixture1Type:'', admixture1Oz:'', admixture2Type:'', admixture2Oz:'', admixture3Type:'', admixture3Oz:'', totalBatchWeightLb:'',
+  maxAggregateSizeIn: EQUIPMENT_DEFAULTS.maxAggregateSizeIn, totalBatchWeightLb:'',
+  admixtures: [{ type:'', oz:'' }],
     // Equipment IDs
   slumpConeId: EQUIPMENT_DEFAULTS.slumpConeId,
   thermometerId: EQUIPMENT_DEFAULTS.thermometerId,
@@ -49,13 +50,27 @@ export default function ConcreteFormPage() {
   const submit = async (e) => {
     e.preventDefault(); setErr('');
     try {
-      const r = await jsonFetch(`${workflow}/concrete`, { method:'POST', body: JSON.stringify(data) });
+      // Map dynamic admixtures array to legacy fields (admixture1/2/3)
+      const admixtures = data.admixtures || [];
+      const [a1, a2, a3] = [admixtures[0], admixtures[1], admixtures[2]];
+      const payload = {
+        ...data,
+        admixture1Type: a1?.type || '',
+        admixture1Oz: a1?.oz || '',
+        admixture2Type: a2?.type || '',
+        admixture2Oz: a2?.oz || '',
+        admixture3Type: a3?.type || '',
+        admixture3Oz: a3?.oz || '',
+      };
+      const r = await jsonFetch(`${workflow}/concrete`, { method:'POST', body: JSON.stringify(payload) });
       setResult(r);
     } catch (e) { setErr(String(e.message||e)); }
   };
 
   const addCyl = () => setData(d=> ({ ...d, cylinders: [...d.cylinders, { qty:'', sizeIn:'6', ageDays:'28', ids:'' }] }));
   const delCyl = (i) => setData(d=> ({ ...d, cylinders: d.cylinders.filter((_,idx)=> idx!==i) }));
+  const addAdmix = () => setData(d=> ({ ...d, admixtures: [...(d.admixtures||[]), { type:'', oz:'' }] }));
+  const delAdmix = (i) => setData(d=> ({ ...d, admixtures: (d.admixtures||[]).filter((_,idx)=> idx!==i) }));
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -202,24 +217,27 @@ export default function ConcreteFormPage() {
                 <label className="label">Max Aggregate Size (in)
                   <input list="maxAggregateSizeIn-list" className="input mt-1 w-full" value={data.maxAggregateSizeIn} onChange={e=> setData(d=> ({...d, maxAggregateSizeIn:e.target.value}))} />
                 </label>
-                <label className="label">Admix 1 Type
-                  <input className="input mt-1 w-full" value={data.admixture1Type} onChange={e=> setData(d=> ({...d, admixture1Type:e.target.value}))} />
-                </label>
-                <label className="label">Admix 1 (oz)
-                  <input className="input mt-1 w-full" value={data.admixture1Oz} onChange={e=> setData(d=> ({...d, admixture1Oz:e.target.value}))} />
-                </label>
-                <label className="label">Admix 2 Type
-                  <input className="input mt-1 w-full" value={data.admixture2Type} onChange={e=> setData(d=> ({...d, admixture2Type:e.target.value}))} />
-                </label>
-                <label className="label">Admix 2 (oz)
-                  <input className="input mt-1 w-full" value={data.admixture2Oz} onChange={e=> setData(d=> ({...d, admixture2Oz:e.target.value}))} />
-                </label>
-                <label className="label">Admix 3 Type
-                  <input className="input mt-1 w-full" value={data.admixture3Type} onChange={e=> setData(d=> ({...d, admixture3Type:e.target.value}))} />
-                </label>
-                <label className="label">Admix 3 (oz)
-                  <input className="input mt-1 w-full" value={data.admixture3Oz} onChange={e=> setData(d=> ({...d, admixture3Oz:e.target.value}))} />
-                </label>
+                <div className="md:col-span-6">
+                  <div className="text-sm font-semibold text-gray-700 mb-2">Admixtures</div>
+                  <div className="space-y-3">
+                    {(data.admixtures||[]).map((a,i)=> (
+                      <div key={i} className="grid md:grid-cols-6 gap-4 items-end">
+                        <label className="label md:col-span-2">Type
+                          <input className="input mt-1 w-full" value={a.type} onChange={e=> setData(d=> ({...d, admixtures: d.admixtures.map((x,idx)=> idx===i?{...x, type:e.target.value}:x) }))} />
+                        </label>
+                        <label className="label md:col-span-2">Amount (oz)
+                          <input className="input mt-1 w-full" value={a.oz} onChange={e=> setData(d=> ({...d, admixtures: d.admixtures.map((x,idx)=> idx===i?{...x, oz:e.target.value}:x) }))} />
+                        </label>
+                        <div className="md:col-span-2 text-right">
+                          <button type="button" className="btn" onClick={()=> delAdmix(i)}>− Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                    <div>
+                      <button type="button" className="btn" onClick={addAdmix}>+ Add Admixture</button>
+                    </div>
+                  </div>
+                </div>
                 <label className="label">Total Batch Weight (lb)
                   <input className="input mt-1 w-full" value={data.totalBatchWeightLb} onChange={e=> setData(d=> ({...d, totalBatchWeightLb:e.target.value}))} />
                 </label>
@@ -272,7 +290,7 @@ export default function ConcreteFormPage() {
                       <div className="text-sm text-gray-600">Row details</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths: d.strengths.filter((_,idx)=> idx!==i)}))}>Remove</button>
+                      <button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths: d.strengths.filter((_,idx)=> idx!==i)}))}>− Remove</button>
                     </div>
                   </div>
                   <div className="grid md:grid-cols-3 gap-4">
@@ -339,7 +357,7 @@ export default function ConcreteFormPage() {
                   </div>
                 </div>
               ))}
-              <div className="pt-2"><button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths:[...d.strengths, { rowId:'', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', lengthIn3:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }]}))}>+ Add row</button></div>
+              <div className="pt-2"><button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths:[...d.strengths, { rowId:'', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', lengthIn3:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }]}))}>+ Add Strength</button></div>
             </div>
           </section>
 
@@ -355,12 +373,12 @@ export default function ConcreteFormPage() {
                       <td><input className="input w-full" value={c.sizeIn} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, sizeIn:e.target.value}:x) }))} /></td>
                       <td><input className="input w-full" value={c.ageDays} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, ageDays:e.target.value}:x) }))} /></td>
                       <td><input className="input w-full" value={c.ids} onChange={e=> setData(d=> ({...d, cylinders: d.cylinders.map((x,idx)=> idx===i?{...x, ids:e.target.value}:x) }))} /></td>
-                      <td className="text-right"><button type="button" className="btn" onClick={()=> delCyl(i)}>Remove</button></td>
+                      <td className="text-right"><button type="button" className="btn" onClick={()=> delCyl(i)}>− Remove</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="mt-2"><button type="button" className="btn" onClick={addCyl}>+ Add row</button></div>
+              <div className="mt-2"><button type="button" className="btn" onClick={addCyl}>+ Add Cylinder</button></div>
             </div>
           </section>
 
