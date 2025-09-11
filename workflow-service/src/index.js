@@ -132,34 +132,119 @@ const fdtFormSchema = new mongoose.Schema({
 }, { timestamps: true });
 const FdtForm = mongoose.models.FdtForm || mongoose.model('FdtForm', fdtFormSchema);
 
-// Concrete Field Form (Single Mix) minimal schema
+// Concrete Field Form (Single Mix) schema (covers fields from Excel sheet)
 const concreteFormSchema = new mongoose.Schema({
-	// Header
+	// Reference / Header
 	client: String,
 	date: { type: Date, required: true },
 	projectNo: String,
 	projectName: String,
-	weather: String,
-
-	// Delivery / Mix
-	supplier: String,
+	generalLocation: String,
+	specificLocation: String,
+	mixId: String,
+	cylinderId: String,
 	truckNo: String,
 	ticketNo: String,
-	mixDesign: String,
-	placementLocation: String,
-
-	// Fresh properties
-	slumpIn: Number,
-	airContentPct: Number,
-	unitWeightPcf: Number,
-	tempConcreteF: Number,
+	batchTime: String,
+	sampleTime: String,
+	timeTruckFinished: String,
 	ambientTempF: Number,
+	yardsInLoad: Number,
+	cumulativeYardsPlaced: Number,
 	waterAddedGal: Number,
-	admixtures: String,
+	waterCementRatio: Number,
+	supplier: String,
+	plant: String,
+	sampledBy: String,
+	weather: String,
+	estWindMph: Number,
+	estRhPct: Number,
 
-	// Cylinders cast
+	// Physical Properties (measured and spec ranges)
+	airContentPct: Number,
+	specAirMin: Number,
+	specAirMax: Number,
+	slumpIn: Number,
+	specSlumpMin: Number,
+	specSlumpMax: Number,
+	tempConcreteF: Number,
+	specTempMin: { type: Number, default: 50 },
+	specTempMax: { type: Number, default: 90 },
+	unitWeightPcf: Number,
+	yieldCY: Number,
+	relativeYield: Number,
+	mixDesignStrengthPsi: Number,
+	requiredStrengthPsi: Number,
+	cementLb: Number,
+	otherCementitiousLb: Number,
+	waterLb: Number,
+	excessWaterCoarseLb: Number,
+	excessWaterFineLb: Number,
+	fineAggregateLb: Number,
+	coarseAggregate1Lb: Number,
+	coarseAggregate2Lb: Number,
+	maxAggregateSizeIn: Number,
+	admixture1Type: String,
+	admixture1Oz: Number,
+	admixture2Type: String,
+	admixture2Oz: Number,
+	admixture3Type: String,
+	admixture3Oz: Number,
+	totalBatchWeightLb: Number,
+
+	// Equipment Identification
+	slumpConeId: String,
+	thermometerId: String,
+	airMeterId: String,
+	unitWeightMeasureId: String,
+	scaleId: String,
+
+	// Compressive Strengths (rows A..G)
+	strengths: { type: [{
+		rowId: String, // A..G
+		ageDays: Number,
+		testDate: Date,
+		diameterIn1: Number,
+		diameterIn2: Number,
+		lengthIn1: Number,
+		lengthIn2: Number,
+		massGm: Number,
+		capType: String,
+		totalLoadLbf: Number,
+		areaIn2: Number,
+		measuredStrengthPsi: Number,
+		specified28DayStrengthPsi: Number,
+		typeOfFracture: String,
+		personPerformingTest: String,
+		measuredDensityPcf: Number
+	}], default: [] },
+
+	// Testing equipment (bottom section)
+	compMachineId: String,
+	caliperId: String,
+	compScaleId: String,
+	retRings: String,
+
+	// Cylinder logistics
+	cylindersCastInField: { type: Boolean, default: false },
+	cylindersCastInLab: { type: Boolean, default: false },
+	timeCylindersMolded: String,
+	cylindersTempRangeFirst24h: String,
+	whereCylindersCured: String,
+	fieldPlacementObservations: String,
+	remarks: String,
+	dateCylindersReceivedInLab: Date,
+	pickUpBy: String,
+	cylindersCondition: { type: String, enum: ['Good', 'Fair', 'Poor', undefined], default: undefined },
+	chargeableTime: String,
+	testPickUpHours: Number,
+	delayedHours: Number,
+	delayedWhy: String,
+
+	// Cylinders cast (counts by size/age, if recorded separately)
 	cylinders: { type: [{ qty: Number, sizeIn: Number, ageDays: Number, ids: String }], default: [] },
 
+	// People and notes
 	testedBy: String,
 	fieldRepresentative: String,
 	notes: String,
@@ -363,27 +448,117 @@ app.get('/fdt/:id', async (req, res) => {
 const cnum = z.union([z.number(), z.string().transform(v => v.trim() === '' ? undefined : Number(v)).pipe(z.number())]).optional();
 const cdateish = z.union([z.string(), z.date()]);
 const concreteSchema = z.object({
+	// Reference / Header
 	client: z.string().optional(),
 	date: cdateish,
 	projectNo: z.string().optional(),
 	projectName: z.string().optional(),
-	weather: z.string().optional(),
-
-	supplier: z.string().optional(),
+	generalLocation: z.string().optional(),
+	specificLocation: z.string().optional(),
+	mixId: z.string().optional(),
+	cylinderId: z.string().optional(),
 	truckNo: z.string().optional(),
 	ticketNo: z.string().optional(),
-	mixDesign: z.string().optional(),
-	placementLocation: z.string().optional(),
-
-	slumpIn: cnum,
-	airContentPct: cnum,
-	unitWeightPcf: cnum,
-	tempConcreteF: cnum,
+	batchTime: z.string().optional(),
+	sampleTime: z.string().optional(),
+	timeTruckFinished: z.string().optional(),
 	ambientTempF: cnum,
+	yardsInLoad: cnum,
+	cumulativeYardsPlaced: cnum,
 	waterAddedGal: cnum,
-	admixtures: z.string().optional(),
+	waterCementRatio: cnum,
+	supplier: z.string().optional(),
+	plant: z.string().optional(),
+	sampledBy: z.string().optional(),
+	weather: z.string().optional(),
+	estWindMph: cnum,
+	estRhPct: cnum,
 
+	// Physical Properties
+	airContentPct: cnum,
+	specAirMin: cnum,
+	specAirMax: cnum,
+	slumpIn: cnum,
+	specSlumpMin: cnum,
+	specSlumpMax: cnum,
+	tempConcreteF: cnum,
+	specTempMin: cnum,
+	specTempMax: cnum,
+	unitWeightPcf: cnum,
+	yieldCY: cnum,
+	relativeYield: cnum,
+	mixDesignStrengthPsi: cnum,
+	requiredStrengthPsi: cnum,
+	cementLb: cnum,
+	otherCementitiousLb: cnum,
+	waterLb: cnum,
+	excessWaterCoarseLb: cnum,
+	excessWaterFineLb: cnum,
+	fineAggregateLb: cnum,
+	coarseAggregate1Lb: cnum,
+	coarseAggregate2Lb: cnum,
+	maxAggregateSizeIn: cnum,
+	admixture1Type: z.string().optional(),
+	admixture1Oz: cnum,
+	admixture2Type: z.string().optional(),
+	admixture2Oz: cnum,
+	admixture3Type: z.string().optional(),
+	admixture3Oz: cnum,
+	totalBatchWeightLb: cnum,
+
+	// Equipment
+	slumpConeId: z.string().optional(),
+	thermometerId: z.string().optional(),
+	airMeterId: z.string().optional(),
+	unitWeightMeasureId: z.string().optional(),
+	scaleId: z.string().optional(),
+
+	// Compressive strengths rows
+	strengths: z.array(z.object({
+		rowId: z.string().optional(),
+		ageDays: cnum,
+		testDate: cdateish.optional(),
+		diameterIn1: cnum,
+		diameterIn2: cnum,
+		lengthIn1: cnum,
+		lengthIn2: cnum,
+		massGm: cnum,
+		capType: z.string().optional(),
+		totalLoadLbf: cnum,
+		areaIn2: cnum,
+		measuredStrengthPsi: cnum,
+		specified28DayStrengthPsi: cnum,
+		typeOfFracture: z.string().optional(),
+		personPerformingTest: z.string().optional(),
+		measuredDensityPcf: cnum
+	})).optional(),
+
+	// Testing equipment bottom
+	compMachineId: z.string().optional(),
+	caliperId: z.string().optional(),
+	compScaleId: z.string().optional(),
+	retRings: z.string().optional(),
+
+	// Cylinder logistics
+	cylindersCastInField: z.boolean().optional(),
+	cylindersCastInLab: z.boolean().optional(),
+	timeCylindersMolded: z.string().optional(),
+	cylindersTempRangeFirst24h: z.string().optional(),
+	whereCylindersCured: z.string().optional(),
+	fieldPlacementObservations: z.string().optional(),
+	remarks: z.string().optional(),
+	dateCylindersReceivedInLab: cdateish.optional(),
+	pickUpBy: z.string().optional(),
+	cylindersCondition: z.enum(['Good','Fair','Poor']).optional(),
+	chargeableTime: z.string().optional(),
+	testPickUpHours: cnum,
+	delayedHours: cnum,
+	delayedWhy: z.string().optional(),
+
+	// Cylinders cast summary rows
 	cylinders: z.array(z.object({ qty: cnum, sizeIn: cnum, ageDays: cnum, ids: z.string().optional() })).optional(),
+
+	// People / notes
 	testedBy: z.string().optional(),
 	fieldRepresentative: z.string().optional(),
 	notes: z.string().optional()
