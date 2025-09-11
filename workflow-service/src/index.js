@@ -208,6 +208,7 @@ const concreteFormSchema = new mongoose.Schema({
 		diameterIn2: Number,
 		lengthIn1: Number,
 		lengthIn2: Number,
+		lengthIn3: Number,
 		massGm: Number,
 		capType: String,
 		totalLoadLbf: Number,
@@ -238,7 +239,9 @@ const concreteFormSchema = new mongoose.Schema({
 	cylindersCondition: { type: String, enum: ['Good', 'Fair', 'Poor', undefined], default: undefined },
 	chargeableTime: String,
 	testPickUpHours: Number,
+	testPickUpMinutes: Number,
 	delayedHours: Number,
+	delayedMinutes: Number,
 	delayedWhy: String,
 
 	// Cylinders cast (counts by size/age, if recorded separately)
@@ -522,6 +525,7 @@ const concreteSchema = z.object({
 		diameterIn2: cnum,
 		lengthIn1: cnum,
 		lengthIn2: cnum,
+		lengthIn3: cnum,
 		massGm: cnum,
 		capType: z.string().optional(),
 		totalLoadLbf: cnum,
@@ -552,7 +556,9 @@ const concreteSchema = z.object({
 	cylindersCondition: z.enum(['Good','Fair','Poor']).optional(),
 	chargeableTime: z.string().optional(),
 	testPickUpHours: cnum,
+	testPickUpMinutes: cnum,
 	delayedHours: cnum,
+	delayedMinutes: cnum,
 	delayedWhy: z.string().optional(),
 
 	// Cylinders cast summary rows

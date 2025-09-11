@@ -8,10 +8,11 @@ export default function ConcreteFormPage() {
   const { workflow } = baseUrls();
   const [data, setData] = useState({
     date: new Date().toISOString().slice(0,10),
-    client: '', projectNo:'', projectName:'', generalLocation:'', specificLocation:'', weather:'',
-    mixId:'', cylinderId:'', truckNo:'', ticketNo:'', batchTime:'', sampleTime:'', timeTruckFinished:'',
-    ambientTempF:'', yardsInLoad:'', cumulativeYardsPlaced:'', waterAddedGal:'', waterCementRatio:'',
-    supplier:'', plant:'', sampledBy:'', estWindMph:'', estRhPct:'',
+  client: '', projectNo:'', projectName:'', generalLocation:'', specificLocation:'', weather:'',
+  cylinderId:'', mixId:'', truckNo:'', ticketNo:'', supplier:'', plant:'', sampledBy:'',
+  batchTime:'', sampleTime:'', timeTruckFinished:'',
+  ambientTempF:'', yardsInLoad:'', cumulativeYardsPlaced:'', waterAddedGal:'', waterCementRatio:'',
+  estWindMph:'', estRhPct:'',
     // Physical properties and specs
     airContentPct:'', specAirMin:'', specAirMax:'',
     slumpIn:'', specSlumpMin:'', specSlumpMax:'',
@@ -30,9 +31,7 @@ export default function ConcreteFormPage() {
     // Cylinders table
     cylinders:[{ qty:'', sizeIn:'6', ageDays:'7', ids:'' }],
     // Strengths grid scaffold (A..G rows)
-    strengths:[
-      { rowId:'A', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }
-    ],
+  strengths:['A','B','C','D','E','F','G'].map(r=> ({ rowId:r, ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', lengthIn3:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' })),
     // People/notes
     testedBy:'', fieldRepresentative:'', notes:'',
     // Bottom equipment/logistics
@@ -41,8 +40,8 @@ export default function ConcreteFormPage() {
   compScaleId: EQUIPMENT_DEFAULTS.compScaleId,
   retRings: EQUIPMENT_DEFAULTS.retRings,
     cylindersCastInField:false, cylindersCastInLab:false,
-    timeCylindersMolded:'', cylindersTempRangeFirst24h:'', whereCylindersCured:'', fieldPlacementObservations:'', remarks:'',
-    dateCylindersReceivedInLab:'', pickUpBy:'', cylindersCondition:'', chargeableTime:'', testPickUpHours:'', delayedHours:'', delayedWhy:''
+  timeCylindersMolded:'', cylindersTempRangeFirst24h:'', whereCylindersCured:'', fieldPlacementObservations:'', remarks:'',
+  dateCylindersReceivedInLab:'', pickUpBy:'', cylindersCondition:'', chargeableTime:'', testPickUpHours:'', testPickUpMinutes:'', delayedHours:'', delayedMinutes:'', delayedWhy:''
   });
   const [result, setResult] = useState(null);
   const [err, setErr] = useState('');
@@ -59,11 +58,27 @@ export default function ConcreteFormPage() {
   const delCyl = (i) => setData(d=> ({ ...d, cylinders: d.cylinders.filter((_,idx)=> idx!==i) }));
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <Card title="Concrete Field Form" action={<button className="btn" onClick={submit}>Submit</button>}>
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <Card title="Report of Field Inspection of Concrete – Single Mix" action={<button className="btn" onClick={submit}>Submit</button>}>
         <form className="space-y-6" onSubmit={submit}>
           <section>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="section-header">Reference Data</div>
+            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
+              <label className="label">Cylinder ID
+                <input className="input mt-1 w-full" value={data.cylinderId} onChange={e=> setData(d=> ({...d, cylinderId:e.target.value}))} />
+              </label>
+              <label className="label">Date
+                <input type="date" className="input mt-1 w-full" value={data.date} onChange={e=> setData(d=> ({...d, date:e.target.value}))} />
+              </label>
+              <label className="label">Project No.
+                <input className="input mt-1 w-full" value={data.projectNo} onChange={e=> setData(d=> ({...d, projectNo:e.target.value}))} />
+              </label>
+              <label className="label">Client
+                <input className="input mt-1 w-full" value={data.client} onChange={e=> setData(d=> ({...d, client:e.target.value}))} />
+              </label>
+              <label className="label">Project
+                <input className="input mt-1 w-full" value={data.projectName} onChange={e=> setData(d=> ({...d, projectName:e.target.value}))} />
+              </label>
               <label className="label">General Location
                 <input className="input mt-1 w-full" value={data.generalLocation} onChange={e=> setData(d=> ({...d, generalLocation:e.target.value}))} />
               </label>
@@ -73,69 +88,49 @@ export default function ConcreteFormPage() {
               <label className="label">Mix ID
                 <input className="input mt-1 w-full" value={data.mixId} onChange={e=> setData(d=> ({...d, mixId:e.target.value}))} />
               </label>
-              <label className="label">Cylinder ID
-                <input className="input mt-1 w-full" value={data.cylinderId} onChange={e=> setData(d=> ({...d, cylinderId:e.target.value}))} />
-              </label>
-              <label className="label">Batch Time
-                <input className="input mt-1 w-full" value={data.batchTime} onChange={e=> setData(d=> ({...d, batchTime:e.target.value}))} />
-              </label>
-              <label className="label">Sample Time
-                <input className="input mt-1 w-full" value={data.sampleTime} onChange={e=> setData(d=> ({...d, sampleTime:e.target.value}))} />
-              </label>
-              <label className="label">Truck Finished Time
-                <input className="input mt-1 w-full" value={data.timeTruckFinished} onChange={e=> setData(d=> ({...d, timeTruckFinished:e.target.value}))} />
-              </label>
-            </div>
-          </section>
-          <section>
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="label">Date
-                <input type="date" className="input mt-1 w-full" value={data.date} onChange={e=> setData(d=> ({...d, date:e.target.value}))} />
-              </label>
-              <label className="label">Client
-                <input className="input mt-1 w-full" value={data.client} onChange={e=> setData(d=> ({...d, client:e.target.value}))} />
-              </label>
-              <label className="label">Project No
-                <input className="input mt-1 w-full" value={data.projectNo} onChange={e=> setData(d=> ({...d, projectNo:e.target.value}))} />
-              </label>
-              <label className="label">Project Name
-                <input className="input mt-1 w-full" value={data.projectName} onChange={e=> setData(d=> ({...d, projectName:e.target.value}))} />
-              </label>
-              <label className="label">Weather
-                <input className="input mt-1 w-full" value={data.weather} onChange={e=> setData(d=> ({...d, weather:e.target.value}))} />
-              </label>
-            </div>
-          </section>
-
-          <section>
-            <div className="section-header">Delivery / Mix</div>
-            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
-              <label className="label">Supplier
-                <input className="input mt-1 w-full" value={data.supplier} onChange={e=> setData(d=> ({...d, supplier:e.target.value}))} />
-              </label>
-              <label className="label">Truck #
+              <label className="label">Truck No.
                 <input className="input mt-1 w-full" value={data.truckNo} onChange={e=> setData(d=> ({...d, truckNo:e.target.value}))} />
               </label>
-              <label className="label">Ticket #
+              <label className="label">Ticket No.
                 <input className="input mt-1 w-full" value={data.ticketNo} onChange={e=> setData(d=> ({...d, ticketNo:e.target.value}))} />
+              </label>
+              <label className="label">Supplier
+                <input className="input mt-1 w-full" value={data.supplier} onChange={e=> setData(d=> ({...d, supplier:e.target.value}))} />
               </label>
               <label className="label">Plant
                 <input className="input mt-1 w-full" value={data.plant} onChange={e=> setData(d=> ({...d, plant:e.target.value}))} />
               </label>
-              <label className="label">Mix Design
-                <input className="input mt-1 w-full" value={data.mixDesign} onChange={e=> setData(d=> ({...d, mixDesign:e.target.value}))} />
-              </label>
-              <label className="label">Placement Location
-                <input className="input mt-1 w-full" value={data.placementLocation} onChange={e=> setData(d=> ({...d, placementLocation:e.target.value}))} />
-              </label>
-              <label className="label">Sampled By
+              <label className="label">Sampled by
                 <input className="input mt-1 w-full" value={data.sampledBy} onChange={e=> setData(d=> ({...d, sampledBy:e.target.value}))} />
+              </label>
+              <label className="label">Sample Time
+                <input className="input mt-1 w-full" value={data.sampleTime} onChange={e=> setData(d=> ({...d, sampleTime:e.target.value}))} />
+              </label>
+              <label className="label">Batch Time
+                <input className="input mt-1 w-full" value={data.batchTime} onChange={e=> setData(d=> ({...d, batchTime:e.target.value}))} />
+              </label>
+              <label className="label">Time Truck Finished Unloading
+                <input className="input mt-1 w-full" value={data.timeTruckFinished} onChange={e=> setData(d=> ({...d, timeTruckFinished:e.target.value}))} />
+              </label>
+              <label className="label">Ambient Temp (°F)
+                <input className="input mt-1 w-full" value={data.ambientTempF} onChange={e=> setData(d=> ({...d, ambientTempF:e.target.value}))} />
+              </label>
+              <label className="label">Yards in load
+                <input className="input mt-1 w-full" value={data.yardsInLoad} onChange={e=> setData(d=> ({...d, yardsInLoad:e.target.value}))} />
+              </label>
+              <label className="label">Cumulative Yards Placed
+                <input className="input mt-1 w-full" value={data.cumulativeYardsPlaced} onChange={e=> setData(d=> ({...d, cumulativeYardsPlaced:e.target.value}))} />
+              </label>
+              <label className="label">Water Added (gals)
+                <input className="input mt-1 w-full" value={data.waterAddedGal} onChange={e=> setData(d=> ({...d, waterAddedGal:e.target.value}))} />
+              </label>
+              <label className="label">Water/Cement Ratio
+                <input className="input mt-1 w-full" value={data.waterCementRatio} onChange={e=> setData(d=> ({...d, waterCementRatio:e.target.value}))} />
               </label>
             </div>
           </section>
-
           <section>
-            <div className="section-header">Fresh Properties</div>
+            <div className="section-header">Physical Properties</div>
             <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
               <label className="label">Slump (in)
                 <input className="input mt-1 w-full" value={data.slumpIn} onChange={e=> setData(d=> ({...d, slumpIn:e.target.value}))} />
@@ -232,14 +227,23 @@ export default function ConcreteFormPage() {
             </div>
           </section>
           <section>
-            <div className="section-header">Weather & Equipment</div>
+            <div className="section-header">Weather</div>
             <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
+              <label className="label">Weather
+                <input className="input mt-1 w-full" value={data.weather} onChange={e=> setData(d=> ({...d, weather:e.target.value}))} />
+              </label>
               <label className="label">Est. Wind (mph)
                 <input className="input mt-1 w-full" value={data.estWindMph} onChange={e=> setData(d=> ({...d, estWindMph:e.target.value}))} />
               </label>
               <label className="label">Est. RH (%)
                 <input className="input mt-1 w-full" value={data.estRhPct} onChange={e=> setData(d=> ({...d, estRhPct:e.target.value}))} />
               </label>
+            </div>
+          </section>
+          <section>
+            <div className="section-header">Weather & Equipment</div>
+            <div className="p-4 border rounded-b-md grid md:grid-cols-3 gap-4">
+              <div className="md:col-span-3 font-semibold text-sm">Equipment identification</div>
               <label className="label">Slump Cone ID
                 <input list="slumpConeId-list" className="input mt-1 w-full" value={data.slumpConeId} onChange={e=> setData(d=> ({...d, slumpConeId:e.target.value}))} />
               </label>
@@ -263,7 +267,7 @@ export default function ConcreteFormPage() {
               <table className="table w-full text-[12px]">
                 <thead>
                   <tr>
-                    <th>Row</th><th>Age</th><th>Test Date</th><th>Dia 1</th><th>Dia 2</th><th>Len 1</th><th>Len 2</th><th>Mass (gm)</th><th>Cap</th><th>Total Load (lbf)</th><th>Area (in²)</th><th>Strength (psi)</th><th>28d Spec (psi)</th><th>Fracture</th><th>Person</th><th>Density (pcf)</th><th></th>
+                    <th>Row</th><th>Age (days)</th><th>Test Date</th><th>Diameter (in) 1</th><th>Diameter (in) 2</th><th>Length (in) 1</th><th>Length (in) 2</th><th>Length (in) 3</th><th>Mass (gm)</th><th>Type of Cap</th><th>Total Load, lbf</th><th>Area of Cyl (in²)</th><th>Measured Strength (psi)</th><th>Specified 28-day Strength (psi)</th><th>Type of Fracture</th><th>Person Performing Test</th><th>Measured Density of Cyl (pcf)</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -276,6 +280,7 @@ export default function ConcreteFormPage() {
                       <td><input className="input w-20" value={s.diameterIn2||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, diameterIn2:e.target.value}:x) }))} /></td>
                       <td><input className="input w-20" value={s.lengthIn1||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn1:e.target.value}:x) }))} /></td>
                       <td><input className="input w-20" value={s.lengthIn2||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn2:e.target.value}:x) }))} /></td>
+                      <td><input className="input w-20" value={s.lengthIn3||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, lengthIn3:e.target.value}:x) }))} /></td>
                       <td><input className="input w-24" value={s.massGm||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, massGm:e.target.value}:x) }))} /></td>
                       <td><input className="input w-28" value={s.capType||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, capType:e.target.value}:x) }))} /></td>
                       <td><input className="input w-28" value={s.totalLoadLbf||''} onChange={e=> setData(d=> ({...d, strengths: d.strengths.map((x,idx)=> idx===i?{...x, totalLoadLbf:e.target.value}:x) }))} /></td>
@@ -290,7 +295,7 @@ export default function ConcreteFormPage() {
                   ))}
                 </tbody>
               </table>
-              <div className="mt-2"><button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths:[...d.strengths, { rowId:'', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }]}))}>+ Add row</button></div>
+              <div className="mt-2"><button type="button" className="btn" onClick={()=> setData(d=> ({...d, strengths:[...d.strengths, { rowId:'', ageDays:'', testDate:'', diameterIn1:'', diameterIn2:'', lengthIn1:'', lengthIn2:'', lengthIn3:'', massGm:'', capType:'', totalLoadLbf:'', areaIn2:'', measuredStrengthPsi:'', specified28DayStrengthPsi:'', typeOfFracture:'', personPerformingTest:'', measuredDensityPcf:'' }]}))}>+ Add row</button></div>
             </div>
           </section>
 
@@ -380,8 +385,14 @@ export default function ConcreteFormPage() {
               <label className="label">Test pick up (h)
                 <input className="input mt-1 w-full" value={data.testPickUpHours} onChange={e=> setData(d=> ({...d, testPickUpHours:e.target.value}))} />
               </label>
+              <label className="label">Test pick up (min)
+                <input className="input mt-1 w-full" value={data.testPickUpMinutes||''} onChange={e=> setData(d=> ({...d, testPickUpMinutes:e.target.value}))} />
+              </label>
               <label className="label">Delayed (h)
                 <input className="input mt-1 w-full" value={data.delayedHours} onChange={e=> setData(d=> ({...d, delayedHours:e.target.value}))} />
+              </label>
+              <label className="label">Delayed (min)
+                <input className="input mt-1 w-full" value={data.delayedMinutes||''} onChange={e=> setData(d=> ({...d, delayedMinutes:e.target.value}))} />
               </label>
               <label className="label">Why?
                 <input className="input mt-1 w-full" value={data.delayedWhy} onChange={e=> setData(d=> ({...d, delayedWhy:e.target.value}))} />
