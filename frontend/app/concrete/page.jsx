@@ -90,26 +90,47 @@ export default function ConcreteFormPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <Card title="Report of Field Inspection of Concrete – Single Mix">
-        <div className="space-y-6">
-          <div className="section-header">{steps[step].title}</div>
-          <div className="p-4 border rounded-b-md">
+        <div className="space-y-4">
+          {/* Top stepper with labeled tabs */}
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Form steps">
+            {steps.map((s,i)=> {
+              const isCurrent = i===step;
+              const isDone = i < step;
+              return (
+                <button
+                  key={s.key}
+                  role="tab"
+                  aria-selected={isCurrent}
+                  className={`px-3 py-1.5 text-sm rounded-full border transition-colors
+                    ${isCurrent ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : isDone ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                  onClick={()=> setStep(i)}
+                >
+                  <span className="font-medium mr-1">{isDone ? '✓' : i+1}.</span> {s.title}
+                </button>
+              );
+            })}
+          </div>
+
+          <h3 className="text-base font-semibold text-gray-800">{steps[step].title}</h3>
+          <div className="p-4 border rounded-md">
             {StepBody && <StepBody data={data} setData={setData} />}
           </div>
-          <div className="flex justify-between items-center">
-            <button className="btn" disabled={step===0} onClick={()=> setStep(s=> Math.max(0, s-1))}>Back</button>
-            <div className="flex items-center gap-2">
-              {steps.map((s,i)=> (
-                <button key={s.key} aria-label={`Step ${i+1}`} className={`h-2 w-2 rounded-full ${i===step? 'bg-indigo-600':'bg-gray-300'}`} onClick={()=> setStep(i)} />
-              ))}
-            </div>
-            {step < steps.length-1 ? (
-              <button className="btn" onClick={()=> setStep(s=> Math.min(steps.length-1, s+1))}>Next</button>
-            ) : (
-              <div />
-            )}
-          </div>
+
+          {/* Spacer to avoid overlap when sticky footer is active */}
+          <div className="h-2" />
         </div>
         {err && <p className="text-red-400 mt-3">{err}</p>}
+
+        {/* In-card sticky footer for navigation + submit */}
+        <div className="-mx-4 sticky bottom-0 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-t px-4 py-3 flex items-center justify-between">
+          <button className="btn" disabled={step===0} onClick={()=> setStep(s=> Math.max(0, s-1))}>Back</button>
+          <div className="text-sm text-gray-600">Step {step+1} of {steps.length}</div>
+          {step < steps.length-1 ? (
+            <button className="btn" onClick={()=> setStep(s=> Math.min(steps.length-1, s+1))}>Next</button>
+          ) : (
+            <button className="btn" onClick={submit}>Submit</button>
+          )}
+        </div>
       </Card>
 
       {result && (
@@ -118,12 +139,7 @@ export default function ConcreteFormPage() {
           <a className="btn mt-3 inline-block" href={`/concrete/${result._id}`}>Open Report</a>
         </Card>
       )}
-  {/* Single sticky submit on the last step */}
-      {step===steps.length-1 && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <button className="btn shadow-lg" onClick={submit}>Submit</button>
-        </div>
-      )}
+      {/* Removed floating submit; footer inside the card */}
       {/* Datalists for suggestions */}
       {Object.entries(EQUIPMENT_SUGGESTIONS).map(([key, arr]) => (
         <datalist id={`${key}-list`} key={key}>
